@@ -14,8 +14,8 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeGuard
 
-from pyink.output import out
-from pyink.report import NothingChanged
+from indigo.output import out
+from indigo.report import NothingChanged
 
 TRANSFORMED_MAGICS = frozenset(
     (

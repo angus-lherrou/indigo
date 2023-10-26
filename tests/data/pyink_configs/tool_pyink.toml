@@ -1,4 +1,4 @@
-[tool.black]
+[tool.pyink]
 pyink = true
 indigo = true
 pyink-indentation = 2

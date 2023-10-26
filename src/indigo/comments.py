@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Final, Iterator, List, Optional, Union
 
-from pyink.nodes import (
+from indigo.nodes import (
     CLOSING_BRACKETS,
     STANDALONE_COMMENT,
     WHITESPACE,

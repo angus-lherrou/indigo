@@ -17,11 +17,11 @@ from typing import Any, Iterable, Optional, Set
 
 from mypy_extensions import mypyc_attr
 
-from pyink import WriteBack, format_file_in_place
-from pyink.cache import Cache
-from pyink.mode import Mode
-from pyink.output import err
-from pyink.report import Changed, Report
+from indigo import WriteBack, format_file_in_place
+from indigo.cache import Cache
+from indigo.mode import Mode
+from indigo.output import err
+from indigo.report import Changed, Report
 
 
 def maybe_install_uvloop() -> None:

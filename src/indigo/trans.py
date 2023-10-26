@@ -27,10 +27,10 @@ from typing import (
 
 from mypy_extensions import trait
 
-from pyink.comments import contains_pragma_comment
-from pyink.lines import Indentation, Line, append_leaves
-from pyink.mode import Feature, Mode, Quote
-from pyink.nodes import (
+from indigo.comments import contains_pragma_comment
+from indigo.lines import Indentation, Line, append_leaves
+from indigo.mode import Feature, Mode, Quote
+from indigo.nodes import (
     CLOSING_BRACKETS,
     OPENING_BRACKETS,
     STANDALONE_COMMENT,
@@ -42,8 +42,8 @@ from pyink.nodes import (
     replace_child,
     syms,
 )
-from pyink.rusty import Err, Ok, Result
-from pyink.strings import (
+from indigo.rusty import Err, Ok, Result
+from indigo.strings import (
     assert_is_leaf_string,
     count_chars_in_width,
     get_string_prefix,

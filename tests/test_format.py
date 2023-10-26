@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-import pyink
-from pyink.mode import TargetVersion
+import indigo
+from indigo.mode import TargetVersion
 from tests.util import (
     all_data_cases,
     assert_format,
@@ -17,7 +17,7 @@ from tests.util import (
 
 @pytest.fixture(autouse=True)
 def patch_dump_to_file(request: Any) -> Iterator[None]:
-    with patch("pyink.dump_to_file", dump_to_stderr):
+    with patch("indigo.dump_to_file", dump_to_stderr):
         yield
 
 
@@ -57,8 +57,8 @@ def test_empty() -> None:
 
 def test_patma_invalid() -> None:
     source, expected = read_data("miscellaneous", "pattern_matching_invalid")
-    mode = pyink.Mode(target_versions={pyink.TargetVersion.PY310})
-    with pytest.raises(pyink.parsing.InvalidInput) as exc_info:
+    mode = indigo.Mode(target_versions={indigo.TargetVersion.PY310})
+    with pytest.raises(indigo.parsing.InvalidInput) as exc_info:
         assert_format(source, expected, mode, minimum_version=(3, 10))
 
     exc_info.match("Cannot parse: 10:11")

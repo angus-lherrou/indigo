@@ -7,8 +7,8 @@ import sys
 from functools import lru_cache
 from typing import Final, List, Match, Pattern
 
-from pyink._width_table import WIDTH_TABLE
-from pyink.mode import Quote
+from indigo._width_table import WIDTH_TABLE
+from indigo.mode import Quote
 from blib2to3.pytree import Leaf
 
 STRING_PREFIX_CHARS: Final = "furbFURB"  # All possible string prefix characters.

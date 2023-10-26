@@ -12,9 +12,9 @@ else:
 
 from mypy_extensions import mypyc_attr
 
-from pyink.cache import CACHE_DIR
-from pyink.mode import Mode, Preview
-from pyink.strings import has_triple_quotes
+from indigo.cache import CACHE_DIR
+from indigo.mode import Mode, Preview
+from indigo.strings import has_triple_quotes
 from blib2to3 import pygram
 from blib2to3.pgen2 import token
 from blib2to3.pytree import NL, Leaf, Node, type_repr

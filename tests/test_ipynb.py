@@ -9,7 +9,7 @@ import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from click.testing import CliRunner
 
-from pyink import (
+from indigo import (
     Mode,
     NothingChanged,
     format_cell,
@@ -17,7 +17,7 @@ from pyink import (
     format_file_in_place,
     main,
 )
-from pyink.handle_ipynb_magics import jupyter_dependencies_are_installed
+from indigo.handle_ipynb_magics import jupyter_dependencies_are_installed
 from tests.util import DATA_DIR, get_case_path, read_jupyter_notebook
 
 with contextlib.suppress(ModuleNotFoundError):
@@ -55,7 +55,7 @@ def test_trailing_semicolon_with_comment() -> None:
 
 
 def test_trailing_semicolon_with_comment_on_next_line() -> None:
-    src = "import pyink;\n\n# this is a comment"
+    src = "import indigo;\n\n# this is a comment"
     with pytest.raises(NothingChanged):
         format_cell(src, fast=True, mode=JUPYTER_MODE)
 
@@ -440,13 +440,13 @@ def test_cache_isnt_written_if_no_jupyter_deps_single(
     nb = get_case_path("jupyter", "notebook_trailing_newline.ipynb")
     tmp_nb = tmp_path / "notebook.ipynb"
     tmp_nb.write_bytes(nb.read_bytes())
-    monkeypatch.setattr("pyink.jupyter_dependencies_are_installed", lambda warn: False)
+    monkeypatch.setattr("indigo.jupyter_dependencies_are_installed", lambda warn: False)
     result = runner.invoke(
         main, [str(tmp_path / "notebook.ipynb"), f"--config={EMPTY_CONFIG}"]
     )
     assert "No Python files are present to be formatted. Nothing to do" in result.output
     jupyter_dependencies_are_installed.cache_clear()
-    monkeypatch.setattr("pyink.jupyter_dependencies_are_installed", lambda warn: True)
+    monkeypatch.setattr("indigo.jupyter_dependencies_are_installed", lambda warn: True)
     result = runner.invoke(
         main, [str(tmp_path / "notebook.ipynb"), f"--config={EMPTY_CONFIG}"]
     )
@@ -462,13 +462,13 @@ def test_cache_isnt_written_if_no_jupyter_deps_dir(
     tmp_nb = tmp_path / "notebook.ipynb"
     tmp_nb.write_bytes(nb.read_bytes())
     monkeypatch.setattr(
-        "pyink.files.jupyter_dependencies_are_installed", lambda warn: False
+        "indigo.files.jupyter_dependencies_are_installed", lambda warn: False
     )
     result = runner.invoke(main, [str(tmp_path), f"--config={EMPTY_CONFIG}"])
     assert "No Python files are present to be formatted. Nothing to do" in result.output
     jupyter_dependencies_are_installed.cache_clear()
     monkeypatch.setattr(
-        "pyink.files.jupyter_dependencies_are_installed", lambda warn: True
+        "indigo.files.jupyter_dependencies_are_installed", lambda warn: True
     )
     result = runner.invoke(main, [str(tmp_path), f"--config={EMPTY_CONFIG}"])
     assert "reformatted" in result.output
@@ -510,7 +510,7 @@ def test_ipynb_and_pyi_flags() -> None:
 
 def test_unable_to_replace_magics(monkeypatch: MonkeyPatch) -> None:
     src = "%%time\na = 'foo'"
-    monkeypatch.setattr("pyink.handle_ipynb_magics.TOKEN_HEX", lambda _: "foo")
+    monkeypatch.setattr("indigo.handle_ipynb_magics.TOKEN_HEX", lambda _: "foo")
     with pytest.raises(
         AssertionError, match="Black was not able to replace IPython magic"
     ):

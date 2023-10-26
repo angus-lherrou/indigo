@@ -6,8 +6,8 @@ import ast
 import sys
 from typing import Iterable, Iterator, List, Set, Tuple
 
-from pyink.mode import VERSION_TO_FEATURES, Feature, TargetVersion, supports_feature
-from pyink.nodes import syms
+from indigo.mode import VERSION_TO_FEATURES, Feature, TargetVersion, supports_feature
+from indigo.nodes import syms
 from blib2to3 import pygram
 from blib2to3.pgen2 import driver
 from blib2to3.pgen2.grammar import Grammar

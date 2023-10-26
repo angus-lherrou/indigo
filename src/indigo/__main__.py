@@ -1,3 +1,3 @@
-from pyink import patched_main
+from indigo import patched_main
 
 patched_main()

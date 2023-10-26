@@ -2,5 +2,5 @@
 name = "test"
 version = "1.0.0"
 
-[tool.pyink]
+[tool.indigo]
 line-length = 79

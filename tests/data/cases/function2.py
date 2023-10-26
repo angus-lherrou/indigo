@@ -5,7 +5,7 @@ def f(
     with cache_dir():
         if something:
             result = (
-                CliRunner().invoke(pyink.main, [str(src1), str(src2), "--diff", "--check"])
+                CliRunner().invoke(indigo.main, [str(src1), str(src2), "--diff", "--check"])
             )
     limited.append(-limited.pop())  # negate top
     return A(
@@ -61,7 +61,7 @@ def f(
     with cache_dir():
         if something:
             result = CliRunner().invoke(
-                pyink.main, [str(src1), str(src2), "--diff", "--check"]
+                indigo.main, [str(src1), str(src2), "--diff", "--check"]
             )
     limited.append(-limited.pop())  # negate top
     return A(

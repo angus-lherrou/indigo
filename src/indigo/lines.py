@@ -17,9 +17,9 @@ from typing import (
     cast,
 )
 
-from pyink.brackets import COMMA_PRIORITY, DOT_PRIORITY, BracketTracker
-from pyink.mode import Mode, Preview
-from pyink.nodes import (
+from indigo.brackets import COMMA_PRIORITY, DOT_PRIORITY, BracketTracker
+from indigo.mode import Mode, Preview
+from indigo.nodes import (
     BRACKETS,
     CLOSING_BRACKETS,
     OPENING_BRACKETS,
@@ -36,7 +36,7 @@ from pyink.nodes import (
     syms,
     whitespace,
 )
-from pyink.strings import str_width
+from indigo.strings import str_width
 from blib2to3.pgen2 import token
 from blib2to3.pytree import Leaf, Node
 

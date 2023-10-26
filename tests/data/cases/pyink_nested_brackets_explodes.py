@@ -1,4 +1,4 @@
-# flags: --preview --line-length=80 --pyink --pyink-indentation=2
+# flags: --preview --line-length=80 --pyink --indigo --pyink-indentation=2
 # Literal list/tuple/set/dict will always be exploded on their own, immediately
 # nested brackets should match this behavior.
 literal_inner_set = [{

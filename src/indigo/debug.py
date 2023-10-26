@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Any, Iterator, List, TypeVar, Union
 
-from pyink.nodes import Visitor
-from pyink.output import out
-from pyink.parsing import lib2to3_parse
+from indigo.nodes import Visitor
+from indigo.output import out
+from indigo.parsing import lib2to3_parse
 from blib2to3.pgen2 import token
 from blib2to3.pytree import Leaf, Node, type_repr
 

@@ -1,4 +1,4 @@
-# flags: --preview --line-length=80 --pyink --pyink-indentation=2
+# flags: --preview --line-length=80 --pyink --indigo --pyink-indentation=2
 WITH_SET = frozenset({
     1001,
     1002,

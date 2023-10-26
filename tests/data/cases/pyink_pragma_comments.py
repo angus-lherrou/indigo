@@ -1,4 +1,4 @@
-# flags: --preview --line-length=80 --pyink --pyink-indentation=2
+# flags: --preview --line-length=80 --pyink --indigo --pyink-indentation=2
 a_very_long_library_name._private_method(and_a_long_arg)  # pylint: disable=protected-access
 a_very_long_library_name._private_method(and_a_long_arg_that_just_fits_limit_)  # pylint: disable=protected-access
 a_very_long_library_name._private_method(and_a_long_arg_that_just_fits_limit___)  # pylint: disable=protected-access

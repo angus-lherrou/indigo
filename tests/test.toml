@@ -1,4 +1,4 @@
-[tool.pyink]
+[tool.indigo]
 verbose = 1
 --check = "no"
 diff = "y"

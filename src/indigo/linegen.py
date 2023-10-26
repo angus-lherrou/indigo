@@ -13,14 +13,14 @@ if sys.version_info < (3, 8):
 else:
     from typing import Final, Literal
 
-from pyink.brackets import (
+from indigo.brackets import (
     COMMA_PRIORITY,
     DOT_PRIORITY,
     get_leaves_inside_matching_brackets,
     max_delimiter_priority_in_atom,
 )
-from pyink.comments import FMT_OFF, generate_comments, list_comments
-from pyink.lines import (
+from indigo.comments import FMT_OFF, generate_comments, list_comments
+from indigo.lines import (
     Indentation,
     Line,
     RHSResult,
@@ -30,8 +30,8 @@ from pyink.lines import (
     is_line_short_enough,
     line_to_string,
 )
-from pyink.mode import Feature, Mode, Preview
-from pyink.nodes import (
+from indigo.mode import Feature, Mode, Preview
+from indigo.nodes import (
     ASSIGNMENTS,
     BRACKETS,
     CLOSING_BRACKETS,
@@ -63,15 +63,15 @@ from pyink.nodes import (
     syms,
     wrap_in_parentheses,
 )
-from pyink.numerics import normalize_numeric_literal
-from pyink.strings import (
+from indigo.numerics import normalize_numeric_literal
+from indigo.strings import (
     fix_docstring,
     get_string_prefix,
     normalize_string_prefix,
     normalize_string_quotes,
     normalize_unicode_escape_sequences,
 )
-from pyink.trans import (
+from indigo.trans import (
     CannotTransform,
     StringMerger,
     StringParenStripper,

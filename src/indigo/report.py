@@ -8,7 +8,7 @@ from pathlib import Path
 
 from click import style
 
-from pyink.output import err, out
+from indigo.output import err, out
 
 
 class Changed(Enum):
