@@ -1,6 +1,7 @@
-[tool.pyink]
+[tool.indigo]
 # Yes, we use the _Black_ style to format _Pyink_ code.
 pyink = false
+indigo = false
 line-length = 88
 target-version = ['py37', 'py38']
 include = '\.pyi?$'
@@ -12,12 +13,12 @@ requires = ["hatchling>=1.8.0", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pyink"
-description = "Pyink is a python formatter, forked from Black with slightly different behavior."
+name = "indigo"
+description = "Indigo is a python formatter, forked from Pyink with slightly different behavior."
 license = { text = "MIT" }
 requires-python = ">=3.8"
 readme = "README.md"
-authors = [{name = "The Pyink Maintainers", email = "pyink-maintainers@google.com"}]
+authors = [{name = "Angus L'Herrou", email = "piraka@brandeis.edu"}]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",
@@ -55,17 +56,16 @@ jupyter = [
 ]
 
 [project.scripts]
-pyink = "pyink:patched_main"
+indigo = "indigo:patched_main"
 
 [project.urls]
-Changelog = "https://github.com/google/pyink/blob/pyink/CHANGES.md"
-Homepage = "https://github.com/google/pyink"
+Homepage = "https://github.com/angus-lherrou/indigo"
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/_pyink_version.py"
+version-file = "src/_indigo_version.py"
 template = '''
 version = "{version}"
 '''

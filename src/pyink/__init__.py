@@ -298,7 +298,16 @@ def validate_regex(
     default=True,
     help=(
         "Enable the Pyink formatting mode. Disabling it should behave the same as"
-        " Black."
+        " Black plus the Indigo changes (pass --no-indigo to disable those as well)."
+    ),
+)
+@click.option(
+    "--indigo/--no-indigo",
+    is_flag=True,
+    default=True,
+    help=(
+        "Enable the Indigo formatting mode. Disabling it should behave the same as"
+        " Pyink (or Black if --no-pyink is passed)."
     ),
 )
 @click.option(
@@ -491,6 +500,7 @@ def main(  # noqa: C901
     experimental_string_processing: bool,
     preview: bool,
     pyink: bool,
+    indigo: bool,
     pyink_indentation: str,
     pyink_lines: Optional[Sequence[str]],
     pyink_use_majority_quotes: bool,
@@ -585,6 +595,7 @@ def main(  # noqa: C901
         preview=preview,
         python_cell_magics=set(python_cell_magics),
         is_pyink=pyink,
+        is_indigo=indigo,
         pyink_indentation=pyink_indentation,
         quote_style=(
             QuoteStyle.MAJORITY if pyink_use_majority_quotes else QuoteStyle.DOUBLE
