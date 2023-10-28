@@ -1,4 +1,4 @@
-[tool.indigo]
+[tool.nila]
 pyink = false
-indigo = false
+nila = false
 pyink-indentation = 2

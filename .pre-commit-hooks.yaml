@@ -1,7 +1,7 @@
-- id: indigo
-  name: indigo
-  description: "Indigo: a Python formatter forked from Pyink"
-  entry: indigo
+- id: nila
+  name: nila
+  description: "Nila: a Python formatter forked from Pyink"
+  entry: nila
   language: python
   minimum_pre_commit_version: 2.9.2
   require_serial: true

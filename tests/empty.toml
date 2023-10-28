@@ -1,6 +1,6 @@
 # Empty configuration file; used in tests to avoid interference from Black's own config.
 
-# Explicitly disable _Indigo_ and _Pyink_ modes so it's the same as the default _Black_ style.
-[tool.indigo]
+# Explicitly disable _Nila_ and _Pyink_ modes so it's the same as the default _Black_ style.
+[tool.nila]
 pyink = false
-indigo = false
+nila = false

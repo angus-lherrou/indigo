@@ -11,7 +11,7 @@ from operator import attrgetter
 from typing import Dict, Final, Literal, Set
 from warnings import warn
 
-from indigo.const import DEFAULT_LINE_LENGTH
+from nila.const import DEFAULT_LINE_LENGTH
 
 
 class TargetVersion(Enum):
@@ -231,7 +231,7 @@ class Mode:
     python_cell_magics: Set[str] = field(default_factory=set)
     preview: bool = False
     is_pyink: bool = False
-    is_indigo: bool = False
+    is_nila: bool = False
     pyink_indentation: Literal[2, 4] = 4
 
     def __post_init__(self) -> None:
@@ -277,7 +277,7 @@ class Mode:
             str(int(self.experimental_string_processing)),
             str(int(self.preview)),
             str(int(self.is_pyink)),
-            str(int(self.is_indigo)),
+            str(int(self.is_nila)),
             str(self.pyink_indentation),
             sha256((",".join(sorted(self.python_cell_magics))).encode()).hexdigest(),
         ]

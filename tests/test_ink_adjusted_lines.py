@@ -1,6 +1,6 @@
 """Test the ink_adjusted_lines module."""
 
-from indigo import ink_adjusted_lines
+from nila import ink_adjusted_lines
 import pytest
 
 

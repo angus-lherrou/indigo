@@ -1,4 +1,4 @@
 [tool.pyink]
 pyink = true
-indigo = true
+nila = true
 pyink-indentation = 2

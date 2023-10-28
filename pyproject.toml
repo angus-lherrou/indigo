@@ -1,7 +1,7 @@
-[tool.indigo]
+[tool.nila]
 # Yes, we use the _Black_ style to format _Pyink_ code.
 pyink = false
-indigo = false
+nila = false
 line-length = 88
 target-version = ['py37', 'py38']
 include = '\.pyi?$'
@@ -13,8 +13,8 @@ requires = ["hatchling>=1.8.0", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "indigo"
-description = "Indigo is a python formatter, forked from Pyink with slightly different behavior."
+name = "nila"
+description = "Nila is a python formatter, forked from Pyink with slightly different behavior."
 license = { text = "MIT" }
 requires-python = ">=3.8"
 readme = "README.md"
@@ -56,16 +56,16 @@ jupyter = [
 ]
 
 [project.scripts]
-indigo = "indigo:patched_main"
+nila = "nila:patched_main"
 
 [project.urls]
-Homepage = "https://github.com/angus-lherrou/indigo"
+Homepage = "https://github.com/angus-lherrou/nila"
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/_indigo_version.py"
+version-file = "src/_nila_version.py"
 template = '''
 version = "{version}"
 '''

@@ -11,8 +11,8 @@ from typing import Dict, Iterable, NamedTuple, Set, Tuple
 
 from platformdirs import user_cache_dir
 
-from _indigo_version import version as __version__
-from indigo.mode import Mode
+from _nila_version import version as __version__
+from nila.mode import Mode
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -27,17 +27,17 @@ class FileData(NamedTuple):
 
 
 def get_cache_dir() -> Path:
-    """Get the cache directory used by indigo.
+    """Get the cache directory used by nila.
 
     Users can customize this directory on all systems using `PYINK_CACHE_DIR`
     environment variable. By default, the cache directory is the user cache directory
     under the black application.
 
-    This result is immediately set to a constant `indigo.cache.CACHE_DIR` as to avoid
+    This result is immediately set to a constant `nila.cache.CACHE_DIR` as to avoid
     repeated calls.
     """
     # NOTE: Function mostly exists as a clean way to test getting the cache directory.
-    default_cache_dir = user_cache_dir("indigo")
+    default_cache_dir = user_cache_dir("nila")
     cache_dir = Path(os.environ.get("PYINK_CACHE_DIR", default_cache_dir))
     cache_dir = cache_dir / __version__
     return cache_dir

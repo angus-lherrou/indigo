@@ -22,9 +22,9 @@ else:
 
 from blib2to3.pgen2.token import ASYNC, NEWLINE, STRING
 from blib2to3.pytree import type_repr
-from indigo.mode import Quote
-from indigo.nodes import LN, Leaf, Node, STANDALONE_COMMENT, syms, Visitor
-from indigo.strings import STRING_PREFIX_CHARS
+from nila.mode import Quote
+from nila.nodes import LN, Leaf, Node, STANDALONE_COMMENT, syms, Visitor
+from nila.strings import STRING_PREFIX_CHARS
 
 
 def majority_quote(node: Node) -> Quote:

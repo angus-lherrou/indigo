@@ -36,14 +36,14 @@ from click import unstyle
 from click.testing import CliRunner
 from pathspec import PathSpec
 
-import indigo
-import indigo.files
-from indigo import Feature, TargetVersion
-from indigo import re_compile_maybe_verbose as compile_pattern
-from indigo.cache import FileData, get_cache_dir, get_cache_file
-from indigo.debug import DebugVisitor
-from indigo.output import color_diff, diff
-from indigo.report import Report
+import nila
+import nila.files
+from nila import Feature, TargetVersion
+from nila import re_compile_maybe_verbose as compile_pattern
+from nila.cache import FileData, get_cache_dir, get_cache_file
+from nila.debug import DebugVisitor
+from nila.output import color_diff, diff
+from nila.report import Report
 
 # Import other test classes
 from tests.util import (
@@ -67,8 +67,8 @@ from tests.util import (
 THIS_FILE = Path(__file__)
 EMPTY_CONFIG = THIS_DIR / "data" / "empty_pyproject.toml"
 PY36_ARGS = [f"--target-version={version.name.lower()}" for version in PY36_VERSIONS]
-DEFAULT_EXCLUDE = indigo.re_compile_maybe_verbose(indigo.const.DEFAULT_EXCLUDES)
-DEFAULT_INCLUDE = indigo.re_compile_maybe_verbose(indigo.const.DEFAULT_INCLUDES)
+DEFAULT_EXCLUDE = nila.re_compile_maybe_verbose(nila.const.DEFAULT_EXCLUDES)
+DEFAULT_INCLUDE = nila.re_compile_maybe_verbose(nila.const.DEFAULT_INCLUDES)
 T = TypeVar("T")
 R = TypeVar("R")
 
@@ -82,7 +82,7 @@ def cache_dir(exists: bool = True) -> Iterator[Path]:
         cache_dir = Path(workspace)
         if not exists:
             cache_dir = cache_dir / "new"
-        with patch("indigo.cache.CACHE_DIR", cache_dir):
+        with patch("nila.cache.CACHE_DIR", cache_dir):
             yield cache_dir
 
 
@@ -128,7 +128,7 @@ def invokeBlack(
     runner = BlackRunner()
     if ignore_config:
         args = ["--verbose", "--config", str(THIS_DIR / "empty.toml"), *args]
-    result = runner.invoke(indigo.main, args, catch_exceptions=False)
+    result = runner.invoke(nila.main, args, catch_exceptions=False)
     assert result.stdout_bytes is not None
     assert result.stderr_bytes is not None
     msg = (
@@ -145,26 +145,26 @@ class BlackTestCase(BlackBaseTestCase):
 
     def test_empty_ff(self) -> None:
         expected = ""
-        tmp_file = Path(indigo.dump_to_file())
+        tmp_file = Path(nila.dump_to_file())
         try:
-            self.assertFalse(ff(tmp_file, write_back=indigo.WriteBack.YES))
+            self.assertFalse(ff(tmp_file, write_back=nila.WriteBack.YES))
             actual = tmp_file.read_text(encoding="utf-8")
         finally:
             os.unlink(tmp_file)
         self.assertFormatEqual(expected, actual)
 
-    @patch("indigo.dump_to_file", dump_to_stderr)
+    @patch("nila.dump_to_file", dump_to_stderr)
     def test_one_empty_line(self) -> None:
-        mode = indigo.Mode(preview=True)
+        mode = nila.Mode(preview=True)
         for nl in ["\n", "\r\n"]:
             source = expected = nl
             assert_format(source, expected, mode=mode)
 
     def test_one_empty_line_ff(self) -> None:
-        mode = indigo.Mode(preview=True)
+        mode = nila.Mode(preview=True)
         for nl in ["\n", "\r\n"]:
             expected = nl
-            tmp_file = Path(indigo.dump_to_file(nl))
+            tmp_file = Path(nila.dump_to_file(nl))
             if system() == "Windows":
                 # Writing files in text mode automatically uses the system newline,
                 # but in this case we don't want this for testing reasons. See:
@@ -173,7 +173,7 @@ class BlackTestCase(BlackBaseTestCase):
                     f.write(nl.encode("utf-8"))
             try:
                 self.assertFalse(
-                    ff(tmp_file, mode=mode, write_back=indigo.WriteBack.YES)
+                    ff(tmp_file, mode=mode, write_back=nila.WriteBack.YES)
                 )
                 with open(tmp_file, "rb") as f:
                     actual = f.read().decode("utf-8")
@@ -183,19 +183,19 @@ class BlackTestCase(BlackBaseTestCase):
 
     def test_experimental_string_processing_warns(self) -> None:
         self.assertWarns(
-            indigo.mode.Deprecated, indigo.Mode, experimental_string_processing=True
+            nila.mode.Deprecated, nila.Mode, experimental_string_processing=True
         )
 
     def test_piping(self) -> None:
         _, source, expected = read_data_from_file(
-            PROJECT_ROOT / "src/indigo/__init__.py"
+            PROJECT_ROOT / "src/nila/__init__.py"
         )
         result = BlackRunner().invoke(
-            indigo.main,
+            nila.main,
             [
                 "-",
                 "--fast",
-                f"--line-length={indigo.DEFAULT_LINE_LENGTH}",
+                f"--line-length={nila.DEFAULT_LINE_LENGTH}",
                 f"--config={EMPTY_CONFIG}",
             ],
             input=BytesIO(source.encode("utf-8")),
@@ -203,8 +203,8 @@ class BlackTestCase(BlackBaseTestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertFormatEqual(expected, result.output)
         if source != result.output:
-            indigo.assert_equivalent(source, result.output)
-            indigo.assert_stable(source, result.output, DEFAULT_MODE)
+            nila.assert_equivalent(source, result.output)
+            nila.assert_stable(source, result.output, DEFAULT_MODE)
 
     def test_piping_diff(self) -> None:
         diff_header = re.compile(
@@ -216,12 +216,12 @@ class BlackTestCase(BlackBaseTestCase):
         args = [
             "-",
             "--fast",
-            f"--line-length={indigo.DEFAULT_LINE_LENGTH}",
+            f"--line-length={nila.DEFAULT_LINE_LENGTH}",
             "--diff",
             f"--config={EMPTY_CONFIG}",
         ]
         result = BlackRunner().invoke(
-            indigo.main, args, input=BytesIO(source.encode("utf-8"))
+            nila.main, args, input=BytesIO(source.encode("utf-8"))
         )
         self.assertEqual(result.exit_code, 0)
         actual = diff_header.sub(DETERMINISTIC_HEADER, result.output)
@@ -233,13 +233,13 @@ class BlackTestCase(BlackBaseTestCase):
         args = [
             "-",
             "--fast",
-            f"--line-length={indigo.DEFAULT_LINE_LENGTH}",
+            f"--line-length={nila.DEFAULT_LINE_LENGTH}",
             "--diff",
             "--color",
             f"--config={EMPTY_CONFIG}",
         ]
         result = BlackRunner().invoke(
-            indigo.main, args, input=BytesIO(source.encode("utf-8"))
+            nila.main, args, input=BytesIO(source.encode("utf-8"))
         )
         actual = result.output
         # Again, the contents are checked in a different test, so only look for colors.
@@ -249,62 +249,62 @@ class BlackTestCase(BlackBaseTestCase):
         self.assertIn("\033[31m", actual)
         self.assertIn("\033[0m", actual)
 
-    @patch("indigo.dump_to_file", dump_to_stderr)
+    @patch("nila.dump_to_file", dump_to_stderr)
     def _test_wip(self) -> None:
         source, expected = read_data("miscellaneous", "wip")
         sys.settrace(tracefunc)
         mode = replace(
             DEFAULT_MODE,
             experimental_string_processing=False,
-            target_versions={indigo.TargetVersion.PY38},
+            target_versions={nila.TargetVersion.PY38},
         )
         actual = fs(source, mode=mode)
         sys.settrace(None)
         self.assertFormatEqual(expected, actual)
-        indigo.assert_equivalent(source, actual)
-        indigo.assert_stable(source, actual, indigo.FileMode())
+        nila.assert_equivalent(source, actual)
+        nila.assert_stable(source, actual, nila.FileMode())
 
     def test_pep_572_version_detection(self) -> None:
         source, _ = read_data("cases", "pep_572")
-        root = indigo.lib2to3_parse(source)
-        features = indigo.get_features_used(root)
-        self.assertIn(indigo.Feature.ASSIGNMENT_EXPRESSIONS, features)
-        versions = indigo.detect_target_versions(root)
-        self.assertIn(indigo.TargetVersion.PY38, versions)
+        root = nila.lib2to3_parse(source)
+        features = nila.get_features_used(root)
+        self.assertIn(nila.Feature.ASSIGNMENT_EXPRESSIONS, features)
+        versions = nila.detect_target_versions(root)
+        self.assertIn(nila.TargetVersion.PY38, versions)
 
     def test_pep_695_version_detection(self) -> None:
         for file in ("type_aliases", "type_params"):
             source, _ = read_data("cases", file)
-            root = indigo.lib2to3_parse(source)
-            features = indigo.get_features_used(root)
-            self.assertIn(indigo.Feature.TYPE_PARAMS, features)
-            versions = indigo.detect_target_versions(root)
-            self.assertIn(indigo.TargetVersion.PY312, versions)
+            root = nila.lib2to3_parse(source)
+            features = nila.get_features_used(root)
+            self.assertIn(nila.Feature.TYPE_PARAMS, features)
+            versions = nila.detect_target_versions(root)
+            self.assertIn(nila.TargetVersion.PY312, versions)
 
     def test_expression_ff(self) -> None:
         source, expected = read_data("cases", "expression.py")
-        tmp_file = Path(indigo.dump_to_file(source))
+        tmp_file = Path(nila.dump_to_file(source))
         try:
-            self.assertTrue(ff(tmp_file, write_back=indigo.WriteBack.YES))
+            self.assertTrue(ff(tmp_file, write_back=nila.WriteBack.YES))
             actual = tmp_file.read_text(encoding="utf-8")
         finally:
             os.unlink(tmp_file)
         self.assertFormatEqual(expected, actual)
-        with patch("indigo.dump_to_file", dump_to_stderr):
-            indigo.assert_equivalent(source, actual)
-            indigo.assert_stable(source, actual, DEFAULT_MODE)
+        with patch("nila.dump_to_file", dump_to_stderr):
+            nila.assert_equivalent(source, actual)
+            nila.assert_stable(source, actual, DEFAULT_MODE)
 
     def test_expression_diff(self) -> None:
         source, _ = read_data("cases", "expression.py")
         expected, _ = read_data("cases", "expression.diff")
-        tmp_file = Path(indigo.dump_to_file(source))
+        tmp_file = Path(nila.dump_to_file(source))
         diff_header = re.compile(
             rf"{re.escape(str(tmp_file))}\t\d\d\d\d-\d\d-\d\d "
             r"\d\d:\d\d:\d\d\.\d\d\d\d\d\d\+\d\d:\d\d"
         )
         try:
             result = BlackRunner().invoke(
-                indigo.main, ["--diff", str(tmp_file), f"--config={EMPTY_CONFIG}"]
+                nila.main, ["--diff", str(tmp_file), f"--config={EMPTY_CONFIG}"]
             )
             self.assertEqual(result.exit_code, 0)
         finally:
@@ -312,7 +312,7 @@ class BlackTestCase(BlackBaseTestCase):
         actual = result.output
         actual = diff_header.sub(DETERMINISTIC_HEADER, actual)
         if expected != actual:
-            dump = indigo.dump_to_file(actual)
+            dump = nila.dump_to_file(actual)
             msg = (
                 "Expected diff isn't equal to the actual. If you made changes to"
                 " expression.py and this is an anticipated difference, overwrite"
@@ -323,10 +323,10 @@ class BlackTestCase(BlackBaseTestCase):
     def test_expression_diff_with_color(self) -> None:
         source, _ = read_data("cases", "expression.py")
         expected, _ = read_data("cases", "expression.diff")
-        tmp_file = Path(indigo.dump_to_file(source))
+        tmp_file = Path(nila.dump_to_file(source))
         try:
             result = BlackRunner().invoke(
-                indigo.main,
+                nila.main,
                 ["--diff", "--color", str(tmp_file), f"--config={EMPTY_CONFIG}"],
             )
         finally:
@@ -342,51 +342,51 @@ class BlackTestCase(BlackBaseTestCase):
 
     def test_detect_pos_only_arguments(self) -> None:
         source, _ = read_data("cases", "pep_570")
-        root = indigo.lib2to3_parse(source)
-        features = indigo.get_features_used(root)
-        self.assertIn(indigo.Feature.POS_ONLY_ARGUMENTS, features)
-        versions = indigo.detect_target_versions(root)
-        self.assertIn(indigo.TargetVersion.PY38, versions)
+        root = nila.lib2to3_parse(source)
+        features = nila.get_features_used(root)
+        self.assertIn(nila.Feature.POS_ONLY_ARGUMENTS, features)
+        versions = nila.detect_target_versions(root)
+        self.assertIn(nila.TargetVersion.PY38, versions)
 
     def test_detect_debug_f_strings(self) -> None:
-        root = indigo.lib2to3_parse("""f"{x=}" """)
-        features = indigo.get_features_used(root)
-        self.assertIn(indigo.Feature.DEBUG_F_STRINGS, features)
-        versions = indigo.detect_target_versions(root)
-        self.assertIn(indigo.TargetVersion.PY38, versions)
+        root = nila.lib2to3_parse("""f"{x=}" """)
+        features = nila.get_features_used(root)
+        self.assertIn(nila.Feature.DEBUG_F_STRINGS, features)
+        versions = nila.detect_target_versions(root)
+        self.assertIn(nila.TargetVersion.PY38, versions)
 
-        root = indigo.lib2to3_parse(
+        root = nila.lib2to3_parse(
             """f"{x}"\nf'{"="}'\nf'{(x:=5)}'\nf'{f(a="3=")}'\nf'{x:=10}'\n"""
         )
-        features = indigo.get_features_used(root)
-        self.assertNotIn(indigo.Feature.DEBUG_F_STRINGS, features)
+        features = nila.get_features_used(root)
+        self.assertNotIn(nila.Feature.DEBUG_F_STRINGS, features)
 
         # We don't yet support feature version detection in nested f-strings
-        root = indigo.lib2to3_parse(
+        root = nila.lib2to3_parse(
             """f"heard a rumour that { f'{1+1=}' } ... seems like it could be true" """
         )
-        features = indigo.get_features_used(root)
-        self.assertNotIn(indigo.Feature.DEBUG_F_STRINGS, features)
+        features = nila.get_features_used(root)
+        self.assertNotIn(nila.Feature.DEBUG_F_STRINGS, features)
 
-    @patch("indigo.dump_to_file", dump_to_stderr)
+    @patch("nila.dump_to_file", dump_to_stderr)
     def test_string_quotes(self) -> None:
         source, expected = read_data("miscellaneous", "string_quotes")
-        mode = indigo.Mode(preview=True)
+        mode = nila.Mode(preview=True)
         assert_format(source, expected, mode)
         mode = replace(mode, string_normalization=False)
         not_normalized = fs(source, mode=mode)
         self.assertFormatEqual(source.replace("\\\n", ""), not_normalized)
-        indigo.assert_equivalent(source, not_normalized)
-        indigo.assert_stable(source, not_normalized, mode=mode)
+        nila.assert_equivalent(source, not_normalized)
+        nila.assert_stable(source, not_normalized, mode=mode)
 
     def test_skip_source_first_line(self) -> None:
         source, _ = read_data("miscellaneous", "invalid_header")
-        tmp_file = Path(indigo.dump_to_file(source))
+        tmp_file = Path(nila.dump_to_file(source))
         # Full source should fail (invalid syntax at header)
         self.invokeBlack([str(tmp_file), "--diff", "--check"], exit_code=123)
         # So, skipping the first line should work
         result = BlackRunner().invoke(
-            indigo.main, [str(tmp_file), "-x", f"--config={EMPTY_CONFIG}"]
+            nila.main, [str(tmp_file), "-x", f"--config={EMPTY_CONFIG}"]
         )
         self.assertEqual(result.exit_code, 0)
         actual = tmp_file.read_text(encoding="utf-8")
@@ -399,7 +399,7 @@ class BlackTestCase(BlackBaseTestCase):
             test_file = Path(workspace) / "skip_header.py"
             test_file.write_bytes(code_mixing_newlines)
             mode = replace(DEFAULT_MODE, skip_source_first_line=True)
-            ff(test_file, mode=mode, write_back=indigo.WriteBack.YES)
+            ff(test_file, mode=mode, write_back=nila.WriteBack.YES)
             self.assertEqual(test_file.read_bytes(), expected)
 
     def test_skip_magic_trailing_comma(self) -> None:
@@ -407,14 +407,14 @@ class BlackTestCase(BlackBaseTestCase):
         expected, _ = read_data(
             "miscellaneous", "expression_skip_magic_trailing_comma.diff"
         )
-        tmp_file = Path(indigo.dump_to_file(source))
+        tmp_file = Path(nila.dump_to_file(source))
         diff_header = re.compile(
             rf"{re.escape(str(tmp_file))}\t\d\d\d\d-\d\d-\d\d "
             r"\d\d:\d\d:\d\d\.\d\d\d\d\d\d\+\d\d:\d\d"
         )
         try:
             result = BlackRunner().invoke(
-                indigo.main, ["-C", "--diff", str(tmp_file), f"--config={EMPTY_CONFIG}"]
+                nila.main, ["-C", "--diff", str(tmp_file), f"--config={EMPTY_CONFIG}"]
             )
             self.assertEqual(result.exit_code, 0)
         finally:
@@ -423,7 +423,7 @@ class BlackTestCase(BlackBaseTestCase):
         actual = diff_header.sub(DETERMINISTIC_HEADER, actual)
         actual = actual.rstrip() + "\n"  # the diff output has a trailing space
         if expected != actual:
-            dump = indigo.dump_to_file(actual)
+            dump = nila.dump_to_file(actual)
             msg = (
                 "Expected diff isn't equal to the actual. If you made changes to"
                 " expression.py and this is an anticipated difference, overwrite"
@@ -432,7 +432,7 @@ class BlackTestCase(BlackBaseTestCase):
             )
             self.assertEqual(expected, actual, msg)
 
-    @patch("indigo.dump_to_file", dump_to_stderr)
+    @patch("nila.dump_to_file", dump_to_stderr)
     def test_async_as_identifier(self) -> None:
         source_path = get_case_path("miscellaneous", "async_as_identifier")
         _, source, expected = read_data_from_file(source_path)
@@ -440,14 +440,14 @@ class BlackTestCase(BlackBaseTestCase):
         self.assertFormatEqual(expected, actual)
         major, minor = sys.version_info[:2]
         if major < 3 or (major <= 3 and minor < 7):
-            indigo.assert_equivalent(source, actual)
-        indigo.assert_stable(source, actual, DEFAULT_MODE)
+            nila.assert_equivalent(source, actual)
+        nila.assert_stable(source, actual, DEFAULT_MODE)
         # ensure black can parse this when the target is 3.6
         self.invokeBlack([str(source_path), "--target-version", "py36"])
         # but not on 3.7, because async/await is no longer an identifier
         self.invokeBlack([str(source_path), "--target-version", "py37"], exit_code=123)
 
-    @patch("indigo.dump_to_file", dump_to_stderr)
+    @patch("nila.dump_to_file", dump_to_stderr)
     def test_python37(self) -> None:
         source_path = get_case_path("cases", "python37")
         _, source, expected = read_data_from_file(source_path)
@@ -455,8 +455,8 @@ class BlackTestCase(BlackBaseTestCase):
         self.assertFormatEqual(expected, actual)
         major, minor = sys.version_info[:2]
         if major > 3 or (major == 3 and minor >= 7):
-            indigo.assert_equivalent(source, actual)
-        indigo.assert_stable(source, actual, DEFAULT_MODE)
+            nila.assert_equivalent(source, actual)
+        nila.assert_stable(source, actual, DEFAULT_MODE)
         # ensure black can parse this when the target is 3.7
         self.invokeBlack([str(source_path), "--target-version", "py37"])
         # but not on 3.6, because we use async as a reserved keyword
@@ -509,7 +509,7 @@ class BlackTestCase(BlackBaseTestCase):
             # Note that the root folder (project_root) isn't the folder
             # named "root" (aka working_directory)
             report = MagicMock(verbose=True)
-            indigo.get_sources(
+            nila.get_sources(
                 root=project_root,
                 src=("./child",),
                 quiet=False,
@@ -540,21 +540,21 @@ class BlackTestCase(BlackBaseTestCase):
         def err(msg: str, **kwargs: Any) -> None:
             err_lines.append(msg)
 
-        with patch("indigo.output._out", out), patch("indigo.output._err", err):
-            report.done(Path("f1"), indigo.Changed.NO)
+        with patch("nila.output._out", out), patch("nila.output._err", err):
+            report.done(Path("f1"), nila.Changed.NO)
             self.assertEqual(len(out_lines), 1)
             self.assertEqual(len(err_lines), 0)
             self.assertEqual(out_lines[-1], "f1 already well formatted, good job.")
             self.assertEqual(unstyle(str(report)), "1 file left unchanged.")
             self.assertEqual(report.return_code, 0)
-            report.done(Path("f2"), indigo.Changed.YES)
+            report.done(Path("f2"), nila.Changed.YES)
             self.assertEqual(len(out_lines), 2)
             self.assertEqual(len(err_lines), 0)
             self.assertEqual(out_lines[-1], "reformatted f2")
             self.assertEqual(
                 unstyle(str(report)), "1 file reformatted, 1 file left unchanged."
             )
-            report.done(Path("f3"), indigo.Changed.CACHED)
+            report.done(Path("f3"), nila.Changed.CACHED)
             self.assertEqual(len(out_lines), 3)
             self.assertEqual(len(err_lines), 0)
             self.assertEqual(
@@ -577,7 +577,7 @@ class BlackTestCase(BlackBaseTestCase):
                 " reformat.",
             )
             self.assertEqual(report.return_code, 123)
-            report.done(Path("f3"), indigo.Changed.YES)
+            report.done(Path("f3"), nila.Changed.YES)
             self.assertEqual(len(out_lines), 4)
             self.assertEqual(len(err_lines), 1)
             self.assertEqual(out_lines[-1], "reformatted f3")
@@ -607,7 +607,7 @@ class BlackTestCase(BlackBaseTestCase):
                 " reformat.",
             )
             self.assertEqual(report.return_code, 123)
-            report.done(Path("f4"), indigo.Changed.NO)
+            report.done(Path("f4"), nila.Changed.NO)
             self.assertEqual(len(out_lines), 6)
             self.assertEqual(len(err_lines), 2)
             self.assertEqual(out_lines[-1], "f4 already well formatted, good job.")
@@ -642,19 +642,19 @@ class BlackTestCase(BlackBaseTestCase):
         def err(msg: str, **kwargs: Any) -> None:
             err_lines.append(msg)
 
-        with patch("indigo.output._out", out), patch("indigo.output._err", err):
-            report.done(Path("f1"), indigo.Changed.NO)
+        with patch("nila.output._out", out), patch("nila.output._err", err):
+            report.done(Path("f1"), nila.Changed.NO)
             self.assertEqual(len(out_lines), 0)
             self.assertEqual(len(err_lines), 0)
             self.assertEqual(unstyle(str(report)), "1 file left unchanged.")
             self.assertEqual(report.return_code, 0)
-            report.done(Path("f2"), indigo.Changed.YES)
+            report.done(Path("f2"), nila.Changed.YES)
             self.assertEqual(len(out_lines), 0)
             self.assertEqual(len(err_lines), 0)
             self.assertEqual(
                 unstyle(str(report)), "1 file reformatted, 1 file left unchanged."
             )
-            report.done(Path("f3"), indigo.Changed.CACHED)
+            report.done(Path("f3"), nila.Changed.CACHED)
             self.assertEqual(len(out_lines), 0)
             self.assertEqual(len(err_lines), 0)
             self.assertEqual(
@@ -674,7 +674,7 @@ class BlackTestCase(BlackBaseTestCase):
                 " reformat.",
             )
             self.assertEqual(report.return_code, 123)
-            report.done(Path("f3"), indigo.Changed.YES)
+            report.done(Path("f3"), nila.Changed.YES)
             self.assertEqual(len(out_lines), 0)
             self.assertEqual(len(err_lines), 1)
             self.assertEqual(
@@ -702,7 +702,7 @@ class BlackTestCase(BlackBaseTestCase):
                 " reformat.",
             )
             self.assertEqual(report.return_code, 123)
-            report.done(Path("f4"), indigo.Changed.NO)
+            report.done(Path("f4"), nila.Changed.NO)
             self.assertEqual(len(out_lines), 0)
             self.assertEqual(len(err_lines), 2)
             self.assertEqual(
@@ -726,7 +726,7 @@ class BlackTestCase(BlackBaseTestCase):
             )
 
     def test_report_normal(self) -> None:
-        report = indigo.Report()
+        report = nila.Report()
         out_lines = []
         err_lines = []
 
@@ -736,20 +736,20 @@ class BlackTestCase(BlackBaseTestCase):
         def err(msg: str, **kwargs: Any) -> None:
             err_lines.append(msg)
 
-        with patch("indigo.output._out", out), patch("indigo.output._err", err):
-            report.done(Path("f1"), indigo.Changed.NO)
+        with patch("nila.output._out", out), patch("nila.output._err", err):
+            report.done(Path("f1"), nila.Changed.NO)
             self.assertEqual(len(out_lines), 0)
             self.assertEqual(len(err_lines), 0)
             self.assertEqual(unstyle(str(report)), "1 file left unchanged.")
             self.assertEqual(report.return_code, 0)
-            report.done(Path("f2"), indigo.Changed.YES)
+            report.done(Path("f2"), nila.Changed.YES)
             self.assertEqual(len(out_lines), 1)
             self.assertEqual(len(err_lines), 0)
             self.assertEqual(out_lines[-1], "reformatted f2")
             self.assertEqual(
                 unstyle(str(report)), "1 file reformatted, 1 file left unchanged."
             )
-            report.done(Path("f3"), indigo.Changed.CACHED)
+            report.done(Path("f3"), nila.Changed.CACHED)
             self.assertEqual(len(out_lines), 1)
             self.assertEqual(len(err_lines), 0)
             self.assertEqual(out_lines[-1], "reformatted f2")
@@ -770,7 +770,7 @@ class BlackTestCase(BlackBaseTestCase):
                 " reformat.",
             )
             self.assertEqual(report.return_code, 123)
-            report.done(Path("f3"), indigo.Changed.YES)
+            report.done(Path("f3"), nila.Changed.YES)
             self.assertEqual(len(out_lines), 2)
             self.assertEqual(len(err_lines), 1)
             self.assertEqual(out_lines[-1], "reformatted f3")
@@ -799,7 +799,7 @@ class BlackTestCase(BlackBaseTestCase):
                 " reformat.",
             )
             self.assertEqual(report.return_code, 123)
-            report.done(Path("f4"), indigo.Changed.NO)
+            report.done(Path("f4"), nila.Changed.NO)
             self.assertEqual(len(out_lines), 2)
             self.assertEqual(len(err_lines), 2)
             self.assertEqual(
@@ -823,20 +823,20 @@ class BlackTestCase(BlackBaseTestCase):
             )
 
     def test_lib2to3_parse(self) -> None:
-        with self.assertRaises(indigo.InvalidInput):
-            indigo.lib2to3_parse("invalid syntax")
+        with self.assertRaises(nila.InvalidInput):
+            nila.lib2to3_parse("invalid syntax")
 
         straddling = "x + y"
-        indigo.lib2to3_parse(straddling)
-        indigo.lib2to3_parse(straddling, {TargetVersion.PY36})
+        nila.lib2to3_parse(straddling)
+        nila.lib2to3_parse(straddling, {TargetVersion.PY36})
 
         py2_only = "print x"
-        with self.assertRaises(indigo.InvalidInput):
-            indigo.lib2to3_parse(py2_only, {TargetVersion.PY36})
+        with self.assertRaises(nila.InvalidInput):
+            nila.lib2to3_parse(py2_only, {TargetVersion.PY36})
 
         py3_only = "exec(x, end=y)"
-        indigo.lib2to3_parse(py3_only)
-        indigo.lib2to3_parse(py3_only, {TargetVersion.PY36})
+        nila.lib2to3_parse(py3_only)
+        nila.lib2to3_parse(py3_only, {TargetVersion.PY36})
 
     def test_get_features_used_decorator(self) -> None:
         # Test the feature detection of new decorator syntax
@@ -846,11 +846,11 @@ class BlackTestCase(BlackBaseTestCase):
         simples, relaxed = read_data("miscellaneous", "decorators")
         # skip explanation comments at the top of the file
         for simple_test in simples.split("##")[1:]:
-            node = indigo.lib2to3_parse(simple_test)
+            node = nila.lib2to3_parse(simple_test)
             decorator = str(node.children[0].children[0]).strip()
             self.assertNotIn(
                 Feature.RELAXED_DECORATORS,
-                indigo.get_features_used(node),
+                nila.get_features_used(node),
                 msg=(
                     f"decorator '{decorator}' follows python<=3.8 syntax"
                     "but is detected as 3.9+"
@@ -859,11 +859,11 @@ class BlackTestCase(BlackBaseTestCase):
             )
         # skip the '# output' comment at the top of the output part
         for relaxed_test in relaxed.split("##")[1:]:
-            node = indigo.lib2to3_parse(relaxed_test)
+            node = nila.lib2to3_parse(relaxed_test)
             decorator = str(node.children[0].children[0]).strip()
             self.assertIn(
                 Feature.RELAXED_DECORATORS,
-                indigo.get_features_used(node),
+                nila.get_features_used(node),
                 msg=(
                     f"decorator '{decorator}' uses python3.9+ syntax"
                     "but is detected as python<=3.8"
@@ -872,71 +872,71 @@ class BlackTestCase(BlackBaseTestCase):
             )
 
     def test_get_features_used(self) -> None:
-        node = indigo.lib2to3_parse("def f(*, arg): ...\n")
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("def f(*, arg,): ...\n")
-        self.assertEqual(indigo.get_features_used(node), {Feature.TRAILING_COMMA_IN_DEF})
-        node = indigo.lib2to3_parse("f(*arg,)\n")
+        node = nila.lib2to3_parse("def f(*, arg): ...\n")
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("def f(*, arg,): ...\n")
+        self.assertEqual(nila.get_features_used(node), {Feature.TRAILING_COMMA_IN_DEF})
+        node = nila.lib2to3_parse("f(*arg,)\n")
         self.assertEqual(
-            indigo.get_features_used(node), {Feature.TRAILING_COMMA_IN_CALL}
+            nila.get_features_used(node), {Feature.TRAILING_COMMA_IN_CALL}
         )
-        node = indigo.lib2to3_parse("def f(*, arg): f'string'\n")
-        self.assertEqual(indigo.get_features_used(node), {Feature.F_STRINGS})
-        node = indigo.lib2to3_parse("123_456\n")
-        self.assertEqual(indigo.get_features_used(node), {Feature.NUMERIC_UNDERSCORES})
-        node = indigo.lib2to3_parse("123456\n")
-        self.assertEqual(indigo.get_features_used(node), set())
+        node = nila.lib2to3_parse("def f(*, arg): f'string'\n")
+        self.assertEqual(nila.get_features_used(node), {Feature.F_STRINGS})
+        node = nila.lib2to3_parse("123_456\n")
+        self.assertEqual(nila.get_features_used(node), {Feature.NUMERIC_UNDERSCORES})
+        node = nila.lib2to3_parse("123456\n")
+        self.assertEqual(nila.get_features_used(node), set())
         source, expected = read_data("cases", "function")
-        node = indigo.lib2to3_parse(source)
+        node = nila.lib2to3_parse(source)
         expected_features = {
             Feature.TRAILING_COMMA_IN_CALL,
             Feature.TRAILING_COMMA_IN_DEF,
             Feature.F_STRINGS,
         }
-        self.assertEqual(indigo.get_features_used(node), expected_features)
-        node = indigo.lib2to3_parse(expected)
-        self.assertEqual(indigo.get_features_used(node), expected_features)
+        self.assertEqual(nila.get_features_used(node), expected_features)
+        node = nila.lib2to3_parse(expected)
+        self.assertEqual(nila.get_features_used(node), expected_features)
         source, expected = read_data("cases", "expression")
-        node = indigo.lib2to3_parse(source)
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse(expected)
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("lambda a, /, b: ...")
-        self.assertEqual(indigo.get_features_used(node), {Feature.POS_ONLY_ARGUMENTS})
-        node = indigo.lib2to3_parse("def fn(a, /, b): ...")
-        self.assertEqual(indigo.get_features_used(node), {Feature.POS_ONLY_ARGUMENTS})
-        node = indigo.lib2to3_parse("def fn(): yield a, b")
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("def fn(): return a, b")
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("def fn(): yield *b, c")
-        self.assertEqual(indigo.get_features_used(node), {Feature.UNPACKING_ON_FLOW})
-        node = indigo.lib2to3_parse("def fn(): return a, *b, c")
-        self.assertEqual(indigo.get_features_used(node), {Feature.UNPACKING_ON_FLOW})
-        node = indigo.lib2to3_parse("x = a, *b, c")
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("x: Any = regular")
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("x: Any = (regular, regular)")
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("x: Any = Complex(Type(1))[something]")
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("x: Tuple[int, ...] = a, b, c")
+        node = nila.lib2to3_parse(source)
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse(expected)
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("lambda a, /, b: ...")
+        self.assertEqual(nila.get_features_used(node), {Feature.POS_ONLY_ARGUMENTS})
+        node = nila.lib2to3_parse("def fn(a, /, b): ...")
+        self.assertEqual(nila.get_features_used(node), {Feature.POS_ONLY_ARGUMENTS})
+        node = nila.lib2to3_parse("def fn(): yield a, b")
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("def fn(): return a, b")
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("def fn(): yield *b, c")
+        self.assertEqual(nila.get_features_used(node), {Feature.UNPACKING_ON_FLOW})
+        node = nila.lib2to3_parse("def fn(): return a, *b, c")
+        self.assertEqual(nila.get_features_used(node), {Feature.UNPACKING_ON_FLOW})
+        node = nila.lib2to3_parse("x = a, *b, c")
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("x: Any = regular")
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("x: Any = (regular, regular)")
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("x: Any = Complex(Type(1))[something]")
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("x: Tuple[int, ...] = a, b, c")
         self.assertEqual(
-            indigo.get_features_used(node), {Feature.ANN_ASSIGN_EXTENDED_RHS}
+            nila.get_features_used(node), {Feature.ANN_ASSIGN_EXTENDED_RHS}
         )
-        node = indigo.lib2to3_parse("try: pass\nexcept Something: pass")
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("try: pass\nexcept (*Something,): pass")
-        self.assertEqual(indigo.get_features_used(node), set())
-        node = indigo.lib2to3_parse("try: pass\nexcept *Group: pass")
-        self.assertEqual(indigo.get_features_used(node), {Feature.EXCEPT_STAR})
-        node = indigo.lib2to3_parse("a[*b]")
-        self.assertEqual(indigo.get_features_used(node), {Feature.VARIADIC_GENERICS})
-        node = indigo.lib2to3_parse("a[x, *y(), z] = t")
-        self.assertEqual(indigo.get_features_used(node), {Feature.VARIADIC_GENERICS})
-        node = indigo.lib2to3_parse("def fn(*args: *T): pass")
-        self.assertEqual(indigo.get_features_used(node), {Feature.VARIADIC_GENERICS})
+        node = nila.lib2to3_parse("try: pass\nexcept Something: pass")
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("try: pass\nexcept (*Something,): pass")
+        self.assertEqual(nila.get_features_used(node), set())
+        node = nila.lib2to3_parse("try: pass\nexcept *Group: pass")
+        self.assertEqual(nila.get_features_used(node), {Feature.EXCEPT_STAR})
+        node = nila.lib2to3_parse("a[*b]")
+        self.assertEqual(nila.get_features_used(node), {Feature.VARIADIC_GENERICS})
+        node = nila.lib2to3_parse("a[x, *y(), z] = t")
+        self.assertEqual(nila.get_features_used(node), {Feature.VARIADIC_GENERICS})
+        node = nila.lib2to3_parse("def fn(*args: *T): pass")
+        self.assertEqual(nila.get_features_used(node), {Feature.VARIADIC_GENERICS})
 
     def test_get_features_used_for_future_flags(self) -> None:
         for src, features in [
@@ -949,42 +949,42 @@ class BlackTestCase(BlackBaseTestCase):
             ("from __future__ import x, y", set()),
         ]:
             with self.subTest(src=src, features=features):
-                node = indigo.lib2to3_parse(src)
-                future_imports = indigo.get_future_imports(node)
+                node = nila.lib2to3_parse(src)
+                future_imports = nila.get_future_imports(node)
                 self.assertEqual(
-                    indigo.get_features_used(node, future_imports=future_imports),
+                    nila.get_features_used(node, future_imports=future_imports),
                     features,
                 )
 
     def test_get_future_imports(self) -> None:
-        node = indigo.lib2to3_parse("\n")
-        self.assertEqual(set(), indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse("from __future__ import indigo\n")
-        self.assertEqual({"indigo"}, indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse("from __future__ import multiple, imports\n")
-        self.assertEqual({"multiple", "imports"}, indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse("from __future__ import (parenthesized, imports)\n")
-        self.assertEqual({"parenthesized", "imports"}, indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse(
+        node = nila.lib2to3_parse("\n")
+        self.assertEqual(set(), nila.get_future_imports(node))
+        node = nila.lib2to3_parse("from __future__ import nila\n")
+        self.assertEqual({"nila"}, nila.get_future_imports(node))
+        node = nila.lib2to3_parse("from __future__ import multiple, imports\n")
+        self.assertEqual({"multiple", "imports"}, nila.get_future_imports(node))
+        node = nila.lib2to3_parse("from __future__ import (parenthesized, imports)\n")
+        self.assertEqual({"parenthesized", "imports"}, nila.get_future_imports(node))
+        node = nila.lib2to3_parse(
             "from __future__ import multiple\nfrom __future__ import imports\n"
         )
-        self.assertEqual({"multiple", "imports"}, indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse("# comment\nfrom __future__ import indigo\n")
-        self.assertEqual({"indigo"}, indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse('"""docstring"""\nfrom __future__ import indigo\n')
-        self.assertEqual({"indigo"}, indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse("some(other, code)\nfrom __future__ import indigo\n")
-        self.assertEqual(set(), indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse("from some.module import indigo\n")
-        self.assertEqual(set(), indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse(
+        self.assertEqual({"multiple", "imports"}, nila.get_future_imports(node))
+        node = nila.lib2to3_parse("# comment\nfrom __future__ import nila\n")
+        self.assertEqual({"nila"}, nila.get_future_imports(node))
+        node = nila.lib2to3_parse('"""docstring"""\nfrom __future__ import nila\n')
+        self.assertEqual({"nila"}, nila.get_future_imports(node))
+        node = nila.lib2to3_parse("some(other, code)\nfrom __future__ import nila\n")
+        self.assertEqual(set(), nila.get_future_imports(node))
+        node = nila.lib2to3_parse("from some.module import nila\n")
+        self.assertEqual(set(), nila.get_future_imports(node))
+        node = nila.lib2to3_parse(
             "from __future__ import unicode_literals as _unicode_literals"
         )
-        self.assertEqual({"unicode_literals"}, indigo.get_future_imports(node))
-        node = indigo.lib2to3_parse(
+        self.assertEqual({"unicode_literals"}, nila.get_future_imports(node))
+        node = nila.lib2to3_parse(
             "from __future__ import unicode_literals as _lol, print"
         )
-        self.assertEqual({"unicode_literals", "print"}, indigo.get_future_imports(node))
+        self.assertEqual({"unicode_literals", "print"}, nila.get_future_imports(node))
 
     @pytest.mark.incompatible_with_mypyc
     def test_debug_visitor(self) -> None:
@@ -999,12 +999,12 @@ class BlackTestCase(BlackBaseTestCase):
         def err(msg: str, **kwargs: Any) -> None:
             err_lines.append(msg)
 
-        with patch("indigo.debug.out", out):
+        with patch("nila.debug.out", out):
             DebugVisitor.show(source)
         actual = "\n".join(out_lines) + "\n"
         log_name = ""
         if expected != actual:
-            log_name = indigo.dump_to_file(*out_lines)
+            log_name = nila.dump_to_file(*out_lines)
         self.assertEqual(
             expected,
             actual,
@@ -1014,39 +1014,39 @@ class BlackTestCase(BlackBaseTestCase):
     def test_format_file_contents(self) -> None:
         mode = DEFAULT_MODE
         empty = ""
-        with self.assertRaises(indigo.NothingChanged):
-            indigo.format_file_contents(empty, mode=mode, fast=False)
+        with self.assertRaises(nila.NothingChanged):
+            nila.format_file_contents(empty, mode=mode, fast=False)
         just_nl = "\n"
-        with self.assertRaises(indigo.NothingChanged):
-            indigo.format_file_contents(just_nl, mode=mode, fast=False)
+        with self.assertRaises(nila.NothingChanged):
+            nila.format_file_contents(just_nl, mode=mode, fast=False)
         same = "j = [1, 2, 3]\n"
-        with self.assertRaises(indigo.NothingChanged):
-            indigo.format_file_contents(same, mode=mode, fast=False)
+        with self.assertRaises(nila.NothingChanged):
+            nila.format_file_contents(same, mode=mode, fast=False)
         different = "j = [1,2,3]"
         expected = same
-        actual = indigo.format_file_contents(different, mode=mode, fast=False)
+        actual = nila.format_file_contents(different, mode=mode, fast=False)
         self.assertEqual(expected, actual)
         invalid = "return if you can"
-        with self.assertRaises(indigo.InvalidInput) as e:
-            indigo.format_file_contents(invalid, mode=mode, fast=False)
+        with self.assertRaises(nila.InvalidInput) as e:
+            nila.format_file_contents(invalid, mode=mode, fast=False)
         self.assertEqual(str(e.exception), "Cannot parse: 1:7: return if you can")
 
-        mode = indigo.Mode(preview=True)
+        mode = nila.Mode(preview=True)
         just_crlf = "\r\n"
-        with self.assertRaises(indigo.NothingChanged):
-            indigo.format_file_contents(just_crlf, mode=mode, fast=False)
+        with self.assertRaises(nila.NothingChanged):
+            nila.format_file_contents(just_crlf, mode=mode, fast=False)
         just_whitespace_nl = "\n\t\n \n\t \n \t\n\n"
-        actual = indigo.format_file_contents(just_whitespace_nl, mode=mode, fast=False)
+        actual = nila.format_file_contents(just_whitespace_nl, mode=mode, fast=False)
         self.assertEqual("\n", actual)
         just_whitespace_crlf = "\r\n\t\r\n \r\n\t \r\n \t\r\n\r\n"
-        actual = indigo.format_file_contents(just_whitespace_crlf, mode=mode, fast=False)
+        actual = nila.format_file_contents(just_whitespace_crlf, mode=mode, fast=False)
         self.assertEqual("\r\n", actual)
 
     def test_endmarker(self) -> None:
-        n = indigo.lib2to3_parse("\n")
-        self.assertEqual(n.type, indigo.syms.file_input)
+        n = nila.lib2to3_parse("\n")
+        self.assertEqual(n.type, nila.syms.file_input)
         self.assertEqual(len(n.children), 1)
-        self.assertEqual(n.children[0].type, indigo.token.ENDMARKER)
+        self.assertEqual(n.children[0].type, nila.token.ENDMARKER)
 
     @patch("tests.conftest.PRINT_FULL_TREE", True)
     @patch("tests.conftest.PRINT_TREE_DIFF", False)
@@ -1061,7 +1061,7 @@ class BlackTestCase(BlackBaseTestCase):
         def err(msg: str, **kwargs: Any) -> None:
             err_lines.append(msg)
 
-        with patch("indigo.output._out", out), patch("indigo.output._err", err):
+        with patch("nila.output._out", out), patch("nila.output._err", err):
             with self.assertRaises(AssertionError):
                 self.assertFormatEqual("j = [1, 2, 3]", "j = [1, 2, 3,]")
 
@@ -1083,7 +1083,7 @@ class BlackTestCase(BlackBaseTestCase):
         def err(msg: str, **kwargs: Any) -> None:
             err_lines.append(msg)
 
-        with patch("indigo.output._out", out), patch("indigo.output._err", err):
+        with patch("nila.output._out", out), patch("nila.output._err", err):
             with self.assertRaises(AssertionError):
                 self.assertFormatEqual("j = [1, 2, 3]\n", "j = [1, 2, 3,]\n")
 
@@ -1142,13 +1142,13 @@ class BlackTestCase(BlackBaseTestCase):
             self.invokeBlack([str(path), "--pyi"])
             actual = path.read_text(encoding="utf-8")
             # verify cache with --pyi is separate
-            pyi_cache = indigo.Cache.read(pyi_mode)
+            pyi_cache = nila.Cache.read(pyi_mode)
             assert not pyi_cache.is_changed(path)
-            normal_cache = indigo.Cache.read(DEFAULT_MODE)
+            normal_cache = nila.Cache.read(DEFAULT_MODE)
             assert normal_cache.is_changed(path)
         self.assertFormatEqual(expected, actual)
-        indigo.assert_equivalent(contents, actual)
-        indigo.assert_stable(contents, actual, pyi_mode)
+        nila.assert_equivalent(contents, actual)
+        nila.assert_stable(contents, actual, pyi_mode)
 
     @event_loop()
     def test_multi_file_force_pyi(self) -> None:
@@ -1167,8 +1167,8 @@ class BlackTestCase(BlackBaseTestCase):
                 actual = path.read_text(encoding="utf-8")
                 self.assertEqual(actual, expected)
             # verify cache with --pyi is separate
-            pyi_cache = indigo.Cache.read(pyi_mode)
-            normal_cache = indigo.Cache.read(reg_mode)
+            pyi_cache = nila.Cache.read(pyi_mode)
+            normal_cache = nila.Cache.read(reg_mode)
             for path in paths:
                 assert not pyi_cache.is_changed(path)
                 assert normal_cache.is_changed(path)
@@ -1176,7 +1176,7 @@ class BlackTestCase(BlackBaseTestCase):
     def test_pipe_force_pyi(self) -> None:
         source, expected = read_data("miscellaneous", "force_pyi")
         result = CliRunner().invoke(
-            indigo.main, ["-", "-q", "--pyi"], input=BytesIO(source.encode("utf-8"))
+            nila.main, ["-", "-q", "--pyi"], input=BytesIO(source.encode("utf-8"))
         )
         self.assertEqual(result.exit_code, 0)
         actual = result.output
@@ -1192,9 +1192,9 @@ class BlackTestCase(BlackBaseTestCase):
             self.invokeBlack([str(path), *PY36_ARGS])
             actual = path.read_text(encoding="utf-8")
             # verify cache with --target-version is separate
-            py36_cache = indigo.Cache.read(py36_mode)
+            py36_cache = nila.Cache.read(py36_mode)
             assert not py36_cache.is_changed(path)
-            normal_cache = indigo.Cache.read(reg_mode)
+            normal_cache = nila.Cache.read(reg_mode)
             assert normal_cache.is_changed(path)
         self.assertEqual(actual, expected)
 
@@ -1215,8 +1215,8 @@ class BlackTestCase(BlackBaseTestCase):
                 actual = path.read_text(encoding="utf-8")
                 self.assertEqual(actual, expected)
             # verify cache with --target-version is separate
-            pyi_cache = indigo.Cache.read(py36_mode)
-            normal_cache = indigo.Cache.read(reg_mode)
+            pyi_cache = nila.Cache.read(py36_mode)
+            normal_cache = nila.Cache.read(reg_mode)
             for path in paths:
                 assert not pyi_cache.is_changed(path)
                 assert normal_cache.is_changed(path)
@@ -1224,7 +1224,7 @@ class BlackTestCase(BlackBaseTestCase):
     def test_pipe_force_py36(self) -> None:
         source, expected = read_data("miscellaneous", "force_py36")
         result = CliRunner().invoke(
-            indigo.main,
+            nila.main,
             ["-", "-q", "--target-version=py36"],
             input=BytesIO(source.encode("utf-8")),
         )
@@ -1235,101 +1235,101 @@ class BlackTestCase(BlackBaseTestCase):
     @pytest.mark.incompatible_with_mypyc
     def test_reformat_one_with_stdin(self) -> None:
         with patch(
-            "indigo.format_stdin_to_stdout",
-            return_value=lambda *args, **kwargs: indigo.Changed.YES,
+            "nila.format_stdin_to_stdout",
+            return_value=lambda *args, **kwargs: nila.Changed.YES,
         ) as fsts:
             report = MagicMock()
             path = Path("-")
-            indigo.reformat_one(
+            nila.reformat_one(
                 path,
                 fast=True,
-                write_back=indigo.WriteBack.YES,
+                write_back=nila.WriteBack.YES,
                 mode=DEFAULT_MODE,
                 report=report,
             )
             fsts.assert_called_once()
-            report.done.assert_called_with(path, indigo.Changed.YES)
+            report.done.assert_called_with(path, nila.Changed.YES)
 
     @pytest.mark.incompatible_with_mypyc
     def test_reformat_one_with_stdin_filename(self) -> None:
         with patch(
-            "indigo.format_stdin_to_stdout",
-            return_value=lambda *args, **kwargs: indigo.Changed.YES,
+            "nila.format_stdin_to_stdout",
+            return_value=lambda *args, **kwargs: nila.Changed.YES,
         ) as fsts:
             report = MagicMock()
             p = "foo.py"
             path = Path(f"__PYINK_STDIN_FILENAME__{p}")
             expected = Path(p)
-            indigo.reformat_one(
+            nila.reformat_one(
                 path,
                 fast=True,
-                write_back=indigo.WriteBack.YES,
+                write_back=nila.WriteBack.YES,
                 mode=DEFAULT_MODE,
                 report=report,
             )
             fsts.assert_called_once_with(
-                fast=True, write_back=indigo.WriteBack.YES, mode=DEFAULT_MODE, lines=None
+                fast=True, write_back=nila.WriteBack.YES, mode=DEFAULT_MODE, lines=None
             )
             # __PYINK_STDIN_FILENAME__ should have been stripped
-            report.done.assert_called_with(expected, indigo.Changed.YES)
+            report.done.assert_called_with(expected, nila.Changed.YES)
 
     @pytest.mark.incompatible_with_mypyc
     def test_reformat_one_with_stdin_filename_pyi(self) -> None:
         with patch(
-            "indigo.format_stdin_to_stdout",
-            return_value=lambda *args, **kwargs: indigo.Changed.YES,
+            "nila.format_stdin_to_stdout",
+            return_value=lambda *args, **kwargs: nila.Changed.YES,
         ) as fsts:
             report = MagicMock()
             p = "foo.pyi"
             path = Path(f"__PYINK_STDIN_FILENAME__{p}")
             expected = Path(p)
-            indigo.reformat_one(
+            nila.reformat_one(
                 path,
                 fast=True,
-                write_back=indigo.WriteBack.YES,
+                write_back=nila.WriteBack.YES,
                 mode=DEFAULT_MODE,
                 report=report,
             )
             fsts.assert_called_once_with(
                 fast=True,
-                write_back=indigo.WriteBack.YES,
+                write_back=nila.WriteBack.YES,
                 mode=replace(DEFAULT_MODE, is_pyi=True),
                 lines=None,
             )
             # __PYINK_STDIN_FILENAME__ should have been stripped
-            report.done.assert_called_with(expected, indigo.Changed.YES)
+            report.done.assert_called_with(expected, nila.Changed.YES)
 
     @pytest.mark.incompatible_with_mypyc
     def test_reformat_one_with_stdin_filename_ipynb(self) -> None:
         with patch(
-            "indigo.format_stdin_to_stdout",
-            return_value=lambda *args, **kwargs: indigo.Changed.YES,
+            "nila.format_stdin_to_stdout",
+            return_value=lambda *args, **kwargs: nila.Changed.YES,
         ) as fsts:
             report = MagicMock()
             p = "foo.ipynb"
             path = Path(f"__PYINK_STDIN_FILENAME__{p}")
             expected = Path(p)
-            indigo.reformat_one(
+            nila.reformat_one(
                 path,
                 fast=True,
-                write_back=indigo.WriteBack.YES,
+                write_back=nila.WriteBack.YES,
                 mode=DEFAULT_MODE,
                 report=report,
             )
             fsts.assert_called_once_with(
                 fast=True,
-                write_back=indigo.WriteBack.YES,
+                write_back=nila.WriteBack.YES,
                 mode=replace(DEFAULT_MODE, is_ipynb=True),
                 lines=None,
             )
             # __PYINK_STDIN_FILENAME__ should have been stripped
-            report.done.assert_called_with(expected, indigo.Changed.YES)
+            report.done.assert_called_with(expected, nila.Changed.YES)
 
     @pytest.mark.incompatible_with_mypyc
     def test_reformat_one_with_stdin_and_existing_path(self) -> None:
         with patch(
-            "indigo.format_stdin_to_stdout",
-            return_value=lambda *args, **kwargs: indigo.Changed.YES,
+            "nila.format_stdin_to_stdout",
+            return_value=lambda *args, **kwargs: nila.Changed.YES,
         ) as fsts:
             report = MagicMock()
             # Even with an existing file, since we are forcing stdin, black
@@ -1339,16 +1339,16 @@ class BlackTestCase(BlackBaseTestCase):
             self.assertTrue(p.is_file())
             path = Path(f"__PYINK_STDIN_FILENAME__{p}")
             expected = Path(p)
-            indigo.reformat_one(
+            nila.reformat_one(
                 path,
                 fast=True,
-                write_back=indigo.WriteBack.YES,
+                write_back=nila.WriteBack.YES,
                 mode=DEFAULT_MODE,
                 report=report,
             )
             fsts.assert_called_once()
             # __PYINK_STDIN_FILENAME__ should have been stripped
-            report.done.assert_called_with(expected, indigo.Changed.YES)
+            report.done.assert_called_with(expected, nila.Changed.YES)
 
     def test_reformat_one_with_stdin_empty(self) -> None:
         cases = [
@@ -1375,17 +1375,17 @@ class BlackTestCase(BlackBaseTestCase):
 
             return get_output
 
-        mode = indigo.Mode(preview=True)
+        mode = nila.Mode(preview=True)
         for content, expected in cases:
             output = io.StringIO()
             io_TextIOWrapper = io.TextIOWrapper
 
             with patch("io.TextIOWrapper", _new_wrapper(output, io_TextIOWrapper)):
                 try:
-                    indigo.format_stdin_to_stdout(
+                    nila.format_stdin_to_stdout(
                         fast=True,
                         content=content,
-                        write_back=indigo.WriteBack.YES,
+                        write_back=nila.WriteBack.YES,
                         mode=mode,
                     )
                 except io.UnsupportedOperation:
@@ -1397,10 +1397,10 @@ class BlackTestCase(BlackBaseTestCase):
         io_TextIOWrapper = io.TextIOWrapper
         with patch("io.TextIOWrapper", _new_wrapper(output, io_TextIOWrapper)):
             try:
-                indigo.format_stdin_to_stdout(
+                nila.format_stdin_to_stdout(
                     fast=True,
                     content="",
-                    write_back=indigo.WriteBack.YES,
+                    write_back=nila.WriteBack.YES,
                     mode=DEFAULT_MODE,
                 )
             except io.UnsupportedOperation:
@@ -1421,7 +1421,7 @@ def func2(): pass
 """
         runner = BlackRunner()
         result = runner.invoke(
-            indigo.main,
+            nila.main,
             ["-", "--fast", "--pyink-lines=1-1"],
             input=BytesIO(contents.encode("utf8")),
         )
@@ -1435,28 +1435,28 @@ def func2(): pass
 
     def test_required_version_matches_version(self) -> None:
         self.invokeBlack(
-            ["--required-version", indigo.__version__, "-c", "0"],
+            ["--required-version", nila.__version__, "-c", "0"],
             exit_code=0,
             ignore_config=True,
         )
 
     def test_required_version_matches_partial_version(self) -> None:
         self.invokeBlack(
-            ["--required-version", indigo.__version__.split(".")[0], "-c", "0"],
+            ["--required-version", nila.__version__.split(".")[0], "-c", "0"],
             exit_code=0,
             ignore_config=True,
         )
 
     def test_required_version_does_not_match_on_minor_version(self) -> None:
         self.invokeBlack(
-            ["--required-version", indigo.__version__.split(".")[0] + ".999", "-c", "0"],
+            ["--required-version", nila.__version__.split(".")[0] + ".999", "-c", "0"],
             exit_code=1,
             ignore_config=True,
         )
 
     def test_required_version_does_not_match_version(self) -> None:
         result = BlackRunner().invoke(
-            indigo.main,
+            nila.main,
             ["--required-version", "20.99b", "-c", "0"],
         )
         self.assertEqual(result.exit_code, 1)
@@ -1468,7 +1468,7 @@ def func2(): pass
             for nl in ["\n", "\r\n"]:
                 contents = nl.join(["def f(  ):", "    pass"])
                 test_file.write_bytes(contents.encode())
-                ff(test_file, write_back=indigo.WriteBack.YES)
+                ff(test_file, write_back=nila.WriteBack.YES)
                 updated_contents: bytes = test_file.read_bytes()
                 self.assertIn(nl.encode(), updated_contents)
                 if nl == "\n":
@@ -1479,7 +1479,7 @@ def func2(): pass
             contents = nl.join(["def f(  ):", "    pass"])
             runner = BlackRunner()
             result = runner.invoke(
-                indigo.main, ["-", "--fast"], input=BytesIO(contents.encode("utf-8"))
+                nila.main, ["-", "--fast"], input=BytesIO(contents.encode("utf-8"))
             )
             self.assertEqual(result.exit_code, 0)
             output = result.stdout_bytes
@@ -1495,12 +1495,12 @@ def func2(): pass
                 (b"l\nl\r\n ", b"l\nl\n"),
             ):
                 test_file.write_bytes(data)
-                ff(test_file, write_back=indigo.WriteBack.YES)
+                ff(test_file, write_back=nila.WriteBack.YES)
                 self.assertEqual(test_file.read_bytes(), expected)
 
     def test_assert_equivalent_different_asts(self) -> None:
         with self.assertRaises(AssertionError):
-            indigo.assert_equivalent("{}", "None")
+            nila.assert_equivalent("{}", "None")
 
     def test_root_logger_not_used_directly(self) -> None:
         def fail(*args: Any, **kwargs: Any) -> None:
@@ -1518,9 +1518,9 @@ def func2(): pass
             ff(THIS_DIR / "util.py")
 
     def test_invalid_config_return_code(self) -> None:
-        tmp_file = Path(indigo.dump_to_file())
+        tmp_file = Path(nila.dump_to_file())
         try:
-            tmp_config = Path(indigo.dump_to_file())
+            tmp_config = Path(nila.dump_to_file())
             tmp_config.unlink()
             args = ["--config", str(tmp_config), str(tmp_file)]
             self.invokeBlack(args, exit_code=2, ignore_config=False)
@@ -1529,7 +1529,7 @@ def func2(): pass
 
     def test_parse_pyproject_toml(self) -> None:
         test_toml_file = THIS_DIR / "test.toml"
-        config = indigo.parse_pyproject_toml(str(test_toml_file))
+        config = nila.parse_pyproject_toml(str(test_toml_file))
         self.assertEqual(config["verbose"], 1)
         self.assertEqual(config["check"], "no")
         self.assertEqual(config["diff"], "y")
@@ -1548,7 +1548,7 @@ def func2(): pass
             ("both_pyproject.toml", ["py310"]),
         ]:
             test_toml_file = THIS_DIR / "data" / "project_metadata" / test_toml
-            config = indigo.parse_pyproject_toml(str(test_toml_file))
+            config = nila.parse_pyproject_toml(str(test_toml_file))
             self.assertEqual(config.get("target_version"), expected)
 
     def test_infer_target_version(self) -> None:
@@ -1616,13 +1616,13 @@ def func2(): pass
             (">3.10,<3.11", None),
         ]:
             test_toml = {"project": {"requires-python": version}}
-            result = indigo.files.infer_target_version(test_toml)
+            result = nila.files.infer_target_version(test_toml)
             self.assertEqual(result, expected)
 
     def test_read_pyproject_toml(self) -> None:
         test_toml_file = THIS_DIR / "test.toml"
         fake_ctx = FakeContext()
-        indigo.read_pyproject_toml(fake_ctx, FakeParameter(), str(test_toml_file))
+        nila.read_pyproject_toml(fake_ctx, FakeParameter(), str(test_toml_file))
         config = fake_ctx.default_map
         self.assertEqual(config["verbose"], "1")
         self.assertEqual(config["check"], "no")
@@ -1654,7 +1654,7 @@ def func2(): pass
             fake_ctx.params["stdin_filename"] = str(src_python)
 
             with change_directory(root):
-                indigo.read_pyproject_toml(fake_ctx, FakeParameter(), None)
+                nila.read_pyproject_toml(fake_ctx, FakeParameter(), None)
 
             config = fake_ctx.default_map
             self.assertEqual(config["verbose"], "1")
@@ -1684,32 +1684,32 @@ def func2(): pass
             src_python.touch()
 
             self.assertEqual(
-                indigo.find_project_root((src_dir, test_dir)),
+                nila.find_project_root((src_dir, test_dir)),
                 (root.resolve(), "pyproject.toml"),
             )
             self.assertEqual(
-                indigo.find_project_root((src_dir,)),
+                nila.find_project_root((src_dir,)),
                 (src_dir.resolve(), "pyproject.toml"),
             )
             self.assertEqual(
-                indigo.find_project_root((src_python,)),
+                nila.find_project_root((src_python,)),
                 (src_dir.resolve(), "pyproject.toml"),
             )
 
             with change_directory(test_dir):
                 self.assertEqual(
-                    indigo.find_project_root(("-",), stdin_filename="../src/a.py"),
+                    nila.find_project_root(("-",), stdin_filename="../src/a.py"),
                     (src_dir.resolve(), "pyproject.toml"),
                 )
 
     @patch(
-        "indigo.files.find_user_pyproject_toml",
+        "nila.files.find_user_pyproject_toml",
     )
     def test_find_pyproject_toml(self, find_user_pyproject_toml: MagicMock) -> None:
         find_user_pyproject_toml.side_effect = RuntimeError()
 
         with redirect_stderr(io.StringIO()) as stderr:
-            result = indigo.files.find_pyproject_toml(
+            result = nila.files.find_pyproject_toml(
                 path_search_start=(str(Path.cwd().root),)
             )
 
@@ -1718,8 +1718,8 @@ def func2(): pass
         assert "Ignoring user configuration" in err
 
     @patch(
-        "indigo.files.find_user_pyproject_toml",
-        indigo.files.find_user_pyproject_toml.__wrapped__,
+        "nila.files.find_user_pyproject_toml",
+        nila.files.find_user_pyproject_toml.__wrapped__,
     )
     def test_find_user_pyproject_toml_linux(self) -> None:
         if system() == "Windows":
@@ -1727,27 +1727,27 @@ def func2(): pass
 
         # Test if XDG_CONFIG_HOME is checked
         with TemporaryDirectory() as workspace:
-            tmp_user_config = Path(workspace) / "indigo"
+            tmp_user_config = Path(workspace) / "nila"
             with patch.dict("os.environ", {"XDG_CONFIG_HOME": workspace}):
                 self.assertEqual(
-                    indigo.files.find_user_pyproject_toml(), tmp_user_config.resolve()
+                    nila.files.find_user_pyproject_toml(), tmp_user_config.resolve()
                 )
 
         # Test fallback for XDG_CONFIG_HOME
         with patch.dict("os.environ"):
             os.environ.pop("XDG_CONFIG_HOME", None)
-            fallback_user_config = Path("~/.config").expanduser() / "indigo"
+            fallback_user_config = Path("~/.config").expanduser() / "nila"
             self.assertEqual(
-                indigo.files.find_user_pyproject_toml(), fallback_user_config.resolve()
+                nila.files.find_user_pyproject_toml(), fallback_user_config.resolve()
             )
 
     def test_find_user_pyproject_toml_windows(self) -> None:
         if system() != "Windows":
             return
 
-        user_config_path = Path.home() / ".indigo"
+        user_config_path = Path.home() / ".nila"
         self.assertEqual(
-            indigo.files.find_user_pyproject_toml(), user_config_path.resolve()
+            nila.files.find_user_pyproject_toml(), user_config_path.resolve()
         )
 
     def test_bpo_33660_workaround(self) -> None:
@@ -1758,8 +1758,8 @@ def func2(): pass
         root = Path("/")
         with change_directory(root):
             path = Path("workspace") / "project"
-            report = indigo.Report(verbose=True)
-            normalized_path = indigo.normalize_path_maybe_ignore(path, root, report)
+            report = nila.Report(verbose=True)
+            normalized_path = nila.normalize_path_maybe_ignore(path, root, report)
             self.assertEqual(normalized_path, "workspace/project")
 
     def test_normalize_path_ignore_windows_junctions_outside_of_root(self) -> None:
@@ -1772,8 +1772,8 @@ def func2(): pass
             junction_target_outside_of_root = root / ".."
             os.system(f"mklink /J {junction_dir} {junction_target_outside_of_root}")
 
-            report = indigo.Report(verbose=True)
-            normalized_path = indigo.normalize_path_maybe_ignore(
+            report = nila.Report(verbose=True)
+            normalized_path = nila.normalize_path_maybe_ignore(
                 junction_dir, root, report
             )
             # Manually delete for Python < 3.8
@@ -1783,8 +1783,8 @@ def func2(): pass
 
     def test_newline_comment_interaction(self) -> None:
         source = "class A:\\\r\n# type: ignore\n pass\n"
-        output = indigo.format_str(source, mode=DEFAULT_MODE)
-        indigo.assert_stable(source, output, mode=DEFAULT_MODE)
+        output = nila.format_str(source, mode=DEFAULT_MODE)
+        nila.assert_stable(source, output, mode=DEFAULT_MODE)
 
     def test_bpo_2142_workaround(self) -> None:
         # https://bugs.python.org/issue2142
@@ -1793,13 +1793,13 @@ def func2(): pass
         # read_data adds a trailing newline
         source = source.rstrip()
         expected, _ = read_data("miscellaneous", "missing_final_newline.diff")
-        tmp_file = Path(indigo.dump_to_file(source, ensure_final_newline=False))
+        tmp_file = Path(nila.dump_to_file(source, ensure_final_newline=False))
         diff_header = re.compile(
             rf"{re.escape(str(tmp_file))}\t\d\d\d\d-\d\d-\d\d "
             r"\d\d:\d\d:\d\d\.\d\d\d\d\d\d\+\d\d:\d\d"
         )
         try:
-            result = BlackRunner().invoke(indigo.main, ["--diff", str(tmp_file)])
+            result = BlackRunner().invoke(nila.main, ["--diff", str(tmp_file)])
             self.assertEqual(result.exit_code, 0)
         finally:
             os.unlink(tmp_file)
@@ -1821,40 +1821,40 @@ def func2(): pass
         """Test the code option with no changes."""
         code = 'print("Hello world")\n'
         args = ["--code", code]
-        result = CliRunner().invoke(indigo.main, args)
+        result = CliRunner().invoke(nila.main, args)
 
         self.compare_results(result, code, 0)
 
     def test_code_option_changed(self) -> None:
         """Test the code option when changes are required."""
         code = "print('hello world')"
-        formatted = indigo.format_str(code, mode=DEFAULT_MODE)
+        formatted = nila.format_str(code, mode=DEFAULT_MODE)
 
         args = ["--code", code]
-        result = CliRunner().invoke(indigo.main, args)
+        result = CliRunner().invoke(nila.main, args)
 
         self.compare_results(result, formatted, 0)
 
     def test_code_option_check(self) -> None:
         """Test the code option when check is passed."""
         args = ["--check", "--code", 'print("Hello world")\n']
-        result = CliRunner().invoke(indigo.main, args)
+        result = CliRunner().invoke(nila.main, args)
         self.compare_results(result, "", 0)
 
     def test_code_option_check_changed(self) -> None:
         """Test the code option when changes are required, and check is passed."""
         args = ["--check", "--code", "print('hello world')"]
-        result = CliRunner().invoke(indigo.main, args)
+        result = CliRunner().invoke(nila.main, args)
         self.compare_results(result, "", 1)
 
     def test_code_option_diff(self) -> None:
         """Test the code option when diff is passed."""
         code = "print('hello world')"
-        formatted = indigo.format_str(code, mode=DEFAULT_MODE)
+        formatted = nila.format_str(code, mode=DEFAULT_MODE)
         result_diff = diff(code, formatted, "STDIN", "STDOUT")
 
         args = ["--diff", "--code", code]
-        result = CliRunner().invoke(indigo.main, args)
+        result = CliRunner().invoke(nila.main, args)
 
         # Remove time from diff
         output = DIFF_TIME.sub("", result.output)
@@ -1865,13 +1865,13 @@ def func2(): pass
     def test_code_option_color_diff(self) -> None:
         """Test the code option when color and diff are passed."""
         code = "print('hello world')"
-        formatted = indigo.format_str(code, mode=DEFAULT_MODE)
+        formatted = nila.format_str(code, mode=DEFAULT_MODE)
 
         result_diff = diff(code, formatted, "STDIN", "STDOUT")
         result_diff = color_diff(result_diff)
 
         args = ["--diff", "--color", "--code", code]
-        result = CliRunner().invoke(indigo.main, args)
+        result = CliRunner().invoke(nila.main, args)
 
         # Remove time from diff
         output = DIFF_TIME.sub("", result.output)
@@ -1882,25 +1882,25 @@ def func2(): pass
     @pytest.mark.incompatible_with_mypyc
     def test_code_option_safe(self) -> None:
         """Test that the code option throws an error when the sanity checks fail."""
-        # Patch indigo.assert_equivalent to ensure the sanity checks fail
-        with patch.object(indigo, "assert_equivalent", side_effect=AssertionError):
+        # Patch nila.assert_equivalent to ensure the sanity checks fail
+        with patch.object(nila, "assert_equivalent", side_effect=AssertionError):
             code = 'print("Hello world")'
             error_msg = f"{code}\nerror: cannot format <string>: \n"
 
             args = ["--safe", "--code", code]
-            result = CliRunner().invoke(indigo.main, args)
+            result = CliRunner().invoke(nila.main, args)
 
             self.compare_results(result, error_msg, 123)
 
     def test_code_option_fast(self) -> None:
         """Test that the code option ignores errors when the sanity checks fail."""
-        # Patch indigo.assert_equivalent to ensure the sanity checks fail
-        with patch.object(indigo, "assert_equivalent", side_effect=AssertionError):
+        # Patch nila.assert_equivalent to ensure the sanity checks fail
+        with patch.object(nila, "assert_equivalent", side_effect=AssertionError):
             code = 'print("Hello world")'
-            formatted = indigo.format_str(code, mode=DEFAULT_MODE)
+            formatted = nila.format_str(code, mode=DEFAULT_MODE)
 
             args = ["--fast", "--code", code]
-            result = CliRunner().invoke(indigo.main, args)
+            result = CliRunner().invoke(nila.main, args)
 
             self.compare_results(result, formatted, 0)
 
@@ -1909,11 +1909,11 @@ def func2(): pass
         """
         Test that the code option finds the pyproject.toml in the current directory.
         """
-        with patch.object(indigo, "parse_pyproject_toml", return_value={}) as parse:
+        with patch.object(nila, "parse_pyproject_toml", return_value={}) as parse:
             args = ["--code", "print"]
             # This is the only directory known to contain a pyproject.toml
             with change_directory(PROJECT_ROOT):
-                CliRunner().invoke(indigo.main, args)
+                CliRunner().invoke(nila.main, args)
                 pyproject_path = Path(Path.cwd(), "pyproject.toml").resolve()
 
             assert (
@@ -1930,10 +1930,10 @@ def func2(): pass
         """
         Test that the code option finds the pyproject.toml in the parent directory.
         """
-        with patch.object(indigo, "parse_pyproject_toml", return_value={}) as parse:
+        with patch.object(nila, "parse_pyproject_toml", return_value={}) as parse:
             with change_directory(THIS_DIR):
                 args = ["--code", "print"]
-                CliRunner().invoke(indigo.main, args)
+                CliRunner().invoke(nila.main, args)
 
                 pyproject_path = Path(Path().cwd().parent, "pyproject.toml").resolve()
                 assert (
@@ -1949,14 +1949,14 @@ def func2(): pass
         """
         Test that an unexpected EOF SyntaxError is nicely presented.
         """
-        with pytest.raises(indigo.parsing.InvalidInput) as exc_info:
-            indigo.lib2to3_parse("print(", {})
+        with pytest.raises(nila.parsing.InvalidInput) as exc_info:
+            nila.lib2to3_parse("print(", {})
 
         exc_info.match("Cannot parse: 2:0: EOF in multi-line statement")
 
     def test_equivalency_ast_parse_failure_includes_error(self) -> None:
         with pytest.raises(AssertionError) as err:
-            indigo.assert_equivalent("a«»a  = 1", "a«»a  = 1")
+            nila.assert_equivalent("a«»a  = 1", "a«»a  = 1")
 
         err.match("--safe")
         # Unfortunately the SyntaxError message has changed in newer versions so we
@@ -1979,7 +1979,7 @@ class TestCaching:
 
         # Force user_cache_dir to use the temporary directory for easier assertions
         patch_user_cache_dir = patch(
-            target="indigo.cache.user_cache_dir",
+            target="nila.cache.user_cache_dir",
             autospec=True,
             return_value=str(workspace1),
         )
@@ -1998,11 +1998,11 @@ class TestCaching:
         with cache_dir() as workspace:
             cache_file = get_cache_file(mode)
             cache_file.write_text("this is not a pickle", encoding="utf-8")
-            assert indigo.Cache.read(mode).file_data == {}
+            assert nila.Cache.read(mode).file_data == {}
             src = (workspace / "test.py").resolve()
             src.write_text("print('hello')", encoding="utf-8")
             invokeBlack([str(src)])
-            cache = indigo.Cache.read(mode)
+            cache = nila.Cache.read(mode)
             assert not cache.is_changed(src)
 
     def test_cache_single_file_already_cached(self) -> None:
@@ -2010,7 +2010,7 @@ class TestCaching:
         with cache_dir() as workspace:
             src = (workspace / "test.py").resolve()
             src.write_text("print('hello')", encoding="utf-8")
-            cache = indigo.Cache.read(mode)
+            cache = nila.Cache.read(mode)
             cache.write([src])
             invokeBlack([str(src)])
             assert src.read_text(encoding="utf-8") == "print('hello')"
@@ -2025,12 +2025,12 @@ class TestCaching:
             one.write_text("print('hello')", encoding="utf-8")
             two = (workspace / "two.py").resolve()
             two.write_text("print('hello')", encoding="utf-8")
-            cache = indigo.Cache.read(mode)
+            cache = nila.Cache.read(mode)
             cache.write([one])
             invokeBlack([str(workspace)])
             assert one.read_text(encoding="utf-8") == "print('hello')"
             assert two.read_text(encoding="utf-8") == 'print("hello")\n'
-            cache = indigo.Cache.read(mode)
+            cache = nila.Cache.read(mode)
             assert not cache.is_changed(one)
             assert not cache.is_changed(two)
 
@@ -2041,8 +2041,8 @@ class TestCaching:
         with cache_dir() as workspace:
             src = (workspace / "test.py").resolve()
             src.write_text("print('hello')", encoding="utf-8")
-            with patch.object(indigo.Cache, "read") as read_cache, patch.object(
-                indigo.Cache, "write"
+            with patch.object(nila.Cache, "read") as read_cache, patch.object(
+                nila.Cache, "write"
             ) as write_cache:
                 cmd = [str(src), "--diff"]
                 if color:
@@ -2061,7 +2061,7 @@ class TestCaching:
                 src = (workspace / f"test{tag}.py").resolve()
                 src.write_text("print('hello')", encoding="utf-8")
             with patch(
-                "indigo.concurrency.Manager", wraps=multiprocessing.Manager
+                "nila.concurrency.Manager", wraps=multiprocessing.Manager
             ) as mgr:
                 cmd = ["--diff", str(workspace)]
                 if color:
@@ -2075,7 +2075,7 @@ class TestCaching:
         mode = DEFAULT_MODE
         with cache_dir():
             result = CliRunner().invoke(
-                indigo.main, ["-"], input=BytesIO(b"print('hello')")
+                nila.main, ["-"], input=BytesIO(b"print('hello')")
             )
             assert not result.exit_code
             cache_file = get_cache_file(mode)
@@ -2084,16 +2084,16 @@ class TestCaching:
     def test_read_cache_no_cachefile(self) -> None:
         mode = DEFAULT_MODE
         with cache_dir():
-            assert indigo.Cache.read(mode).file_data == {}
+            assert nila.Cache.read(mode).file_data == {}
 
     def test_write_cache_read_cache(self) -> None:
         mode = DEFAULT_MODE
         with cache_dir() as workspace:
             src = (workspace / "test.py").resolve()
             src.touch()
-            write_cache = indigo.Cache.read(mode)
+            write_cache = nila.Cache.read(mode)
             write_cache.write([src])
-            read_cache = indigo.Cache.read(mode)
+            read_cache = nila.Cache.read(mode)
             assert not read_cache.is_changed(src)
 
     @pytest.mark.incompatible_with_mypyc
@@ -2106,9 +2106,9 @@ class TestCaching:
             uncached.touch()
             cached.touch()
             cached_but_changed.touch()
-            cache = indigo.Cache.read(DEFAULT_MODE)
+            cache = nila.Cache.read(DEFAULT_MODE)
 
-            orig_func = indigo.Cache.get_file_data
+            orig_func = nila.Cache.get_file_data
 
             def wrapped_func(path: Path) -> FileData:
                 if path == cached:
@@ -2117,7 +2117,7 @@ class TestCaching:
                     return FileData(0.0, 0, "")
                 raise AssertionError
 
-            with patch.object(indigo.Cache, "get_file_data", side_effect=wrapped_func):
+            with patch.object(nila.Cache, "get_file_data", side_effect=wrapped_func):
                 cache.write([cached, cached_but_changed])
             todo, done = cache.filtered_cached({uncached, cached, cached_but_changed})
             assert todo == {uncached, cached_but_changed}
@@ -2129,7 +2129,7 @@ class TestCaching:
             src = (path / "test.py").resolve()
             src.write_text("print('hello')", encoding="utf-8")
             st = src.stat()
-            cache = indigo.Cache.read(DEFAULT_MODE)
+            cache = nila.Cache.read(DEFAULT_MODE)
             cache.write([src])
             cached_file_data = cache.file_data[str(src)]
 
@@ -2149,7 +2149,7 @@ class TestCaching:
             assert done == {src}
             assert cached_file_data.st_mtime < st.st_mtime
             assert cached_file_data.st_size == st.st_size
-            assert cached_file_data.hash == indigo.Cache.hash_digest(src)
+            assert cached_file_data.hash == nila.Cache.hash_digest(src)
 
             # Modify contents
             src.write_text("print('hello world')", encoding="utf-8")
@@ -2159,13 +2159,13 @@ class TestCaching:
             assert done == set()
             assert cached_file_data.st_mtime < new_st.st_mtime
             assert cached_file_data.st_size != new_st.st_size
-            assert cached_file_data.hash != indigo.Cache.hash_digest(src)
+            assert cached_file_data.hash != nila.Cache.hash_digest(src)
 
     def test_write_cache_creates_directory_if_needed(self) -> None:
         mode = DEFAULT_MODE
         with cache_dir(exists=False) as workspace:
             assert not workspace.exists()
-            cache = indigo.Cache.read(mode)
+            cache = nila.Cache.read(mode)
             cache.write([])
             assert workspace.exists()
 
@@ -2180,14 +2180,14 @@ class TestCaching:
             clean = (workspace / "clean.py").resolve()
             clean.write_text('print("hello")\n', encoding="utf-8")
             invokeBlack([str(workspace)], exit_code=123)
-            cache = indigo.Cache.read(mode)
+            cache = nila.Cache.read(mode)
             assert cache.is_changed(failing)
             assert not cache.is_changed(clean)
 
     def test_write_cache_write_fail(self) -> None:
         mode = DEFAULT_MODE
         with cache_dir():
-            cache = indigo.Cache.read(mode)
+            cache = nila.Cache.read(mode)
             with patch.object(Path, "open") as mock:
                 mock.side_effect = OSError
                 cache.write([])
@@ -2198,11 +2198,11 @@ class TestCaching:
         with cache_dir() as workspace:
             path = (workspace / "file.py").resolve()
             path.touch()
-            cache = indigo.Cache.read(mode)
+            cache = nila.Cache.read(mode)
             cache.write([path])
-            one = indigo.Cache.read(mode)
+            one = nila.Cache.read(mode)
             assert not one.is_changed(path)
-            two = indigo.Cache.read(short_mode)
+            two = nila.Cache.read(short_mode)
             assert two.is_changed(path)
 
 
@@ -2225,7 +2225,7 @@ def assert_collected_sources(
         None if extend_exclude is None else compile_pattern(extend_exclude)
     )
     gs_force_exclude = None if force_exclude is None else compile_pattern(force_exclude)
-    collected = indigo.get_sources(
+    collected = nila.get_sources(
         root=root or THIS_DIR,
         src=gs_src,
         quiet=False,
@@ -2234,7 +2234,7 @@ def assert_collected_sources(
         exclude=gs_exclude,
         extend_exclude=gs_extend_exclude,
         force_exclude=gs_force_exclude,
-        report=indigo.Report(),
+        report=nila.Report(),
         stdin_filename=stdin_filename,
     )
     assert sorted(collected) == sorted(gs_expected)
@@ -2273,7 +2273,7 @@ class TestFileCollection:
         src = [root / "dir1", root / "dir2"]
         assert_collected_sources(src, expected, root=root)
 
-    @patch("indigo.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
+    @patch("nila.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
     def test_exclude_for_issue_1572(self) -> None:
         # Exclude shouldn't touch files that were explicitly given to Black through the
         # CLI. Exclude is supposed to only apply to the recursive discovery of files.
@@ -2287,7 +2287,7 @@ class TestFileCollection:
         path = THIS_DIR / "data" / "include_exclude_tests"
         include = re.compile(r"\.pyi?$")
         exclude = re.compile(r"")
-        report = indigo.Report()
+        report = nila.Report()
         gitignore = PathSpec.from_lines(
             "gitwildmatch", ["exclude/", ".definitely_exclude"]
         )
@@ -2298,7 +2298,7 @@ class TestFileCollection:
         ]
         this_abs = THIS_DIR.resolve()
         sources.extend(
-            indigo.gen_python_files(
+            nila.gen_python_files(
                 path.iterdir(),
                 this_abs,
                 include,
@@ -2317,8 +2317,8 @@ class TestFileCollection:
         path = Path(THIS_DIR / "data" / "nested_gitignore_tests")
         include = re.compile(r"\.pyi?$")
         exclude = re.compile(r"")
-        root_gitignore = indigo.files.get_gitignore(path)
-        report = indigo.Report()
+        root_gitignore = nila.files.get_gitignore(path)
+        report = nila.Report()
         expected: List[Path] = [
             Path(path / "x.py"),
             Path(path / "root/b.py"),
@@ -2327,7 +2327,7 @@ class TestFileCollection:
         ]
         this_abs = THIS_DIR.resolve()
         sources = list(
-            indigo.gen_python_files(
+            nila.gen_python_files(
                 path.iterdir(),
                 this_abs,
                 include,
@@ -2353,7 +2353,7 @@ class TestFileCollection:
         path = THIS_DIR / "data" / "invalid_gitignore_tests"
         empty_config = path / "pyproject.toml"
         result = BlackRunner().invoke(
-            indigo.main, ["--verbose", "--config", str(empty_config), str(path)]
+            nila.main, ["--verbose", "--config", str(empty_config), str(path)]
         )
         assert result.exit_code == 1
         assert result.stderr_bytes is not None
@@ -2365,7 +2365,7 @@ class TestFileCollection:
         path = THIS_DIR / "data" / "invalid_nested_gitignore_tests"
         empty_config = path / "pyproject.toml"
         result = BlackRunner().invoke(
-            indigo.main, ["--verbose", "--config", str(empty_config), str(path)]
+            nila.main, ["--verbose", "--config", str(empty_config), str(path)]
         )
         assert result.exit_code == 1
         assert result.stderr_bytes is not None
@@ -2427,9 +2427,9 @@ class TestFileCollection:
     def test_symlinks(self) -> None:
         path = MagicMock()
         root = THIS_DIR.resolve()
-        include = re.compile(indigo.DEFAULT_INCLUDES)
-        exclude = re.compile(indigo.DEFAULT_EXCLUDES)
-        report = indigo.Report()
+        include = re.compile(nila.DEFAULT_INCLUDES)
+        exclude = re.compile(nila.DEFAULT_EXCLUDES)
+        report = nila.Report()
         gitignore = PathSpec.from_lines("gitwildmatch", [])
 
         regular = MagicMock()
@@ -2448,7 +2448,7 @@ class TestFileCollection:
         ignored_symlink.absolute.return_value = root / ".mypy_cache" / "symlink.py"
 
         files = list(
-            indigo.gen_python_files(
+            nila.gen_python_files(
                 path.iterdir(),
                 root,
                 include,
@@ -2467,13 +2467,13 @@ class TestFileCollection:
         outside_root_symlink.resolve.assert_called_once()
         ignored_symlink.resolve.assert_not_called()
 
-    @patch("indigo.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
+    @patch("nila.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
     def test_get_sources_with_stdin(self) -> None:
         src = ["-"]
         expected = ["-"]
         assert_collected_sources(src, expected, include="", exclude=r"/exclude/|a\.py")
 
-    @patch("indigo.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
+    @patch("nila.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
     def test_get_sources_with_stdin_filename(self) -> None:
         src = ["-"]
         stdin_filename = str(THIS_DIR / "data/collections.py")
@@ -2485,7 +2485,7 @@ class TestFileCollection:
             stdin_filename=stdin_filename,
         )
 
-    @patch("indigo.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
+    @patch("nila.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
     def test_get_sources_with_stdin_filename_and_exclude(self) -> None:
         # Exclude shouldn't exclude stdin_filename since it is mimicking the
         # file being passed directly. This is the same as
@@ -2501,7 +2501,7 @@ class TestFileCollection:
             stdin_filename=stdin_filename,
         )
 
-    @patch("indigo.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
+    @patch("nila.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
     def test_get_sources_with_stdin_filename_and_extend_exclude(self) -> None:
         # Extend exclude shouldn't exclude stdin_filename since it is mimicking the
         # file being passed directly. This is the same as
@@ -2517,7 +2517,7 @@ class TestFileCollection:
             stdin_filename=stdin_filename,
         )
 
-    @patch("indigo.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
+    @patch("nila.find_project_root", lambda *args: (THIS_DIR.resolve(), None))
     def test_get_sources_with_stdin_filename_and_force_exclude(self) -> None:
         # Force exclude should exclude the file when passing it through
         # stdin_filename
@@ -2535,36 +2535,36 @@ class TestFileCollection:
         # newlines.
         return stdout.decode().replace("\r\n", "\n")
 
-    def test_indigo_default(self) -> None:
-        path = THIS_DIR / "data" / "indigo_configs"
+    def test_nila_default(self) -> None:
+        path = THIS_DIR / "data" / "nila_configs"
         example = str(path / "example.py")
         config = str(THIS_DIR / "empty.toml")
         result = BlackRunner().invoke(
-            indigo.main, ["--diff", "--config", config, example]
+            nila.main, ["--diff", "--config", config, example]
         )
         assert result.exit_code == 0
         assert result.stdout_bytes is not None
 
         assert "- pass\n+    pass\n" in self.decode_and_normalized(result.stdout_bytes)
 
-    def test_indigo_overrides(self) -> None:
-        path = THIS_DIR / "data" / "indigo_configs"
+    def test_nila_overrides(self) -> None:
+        path = THIS_DIR / "data" / "nila_configs"
         example = str(path / "example.py")
         config = str(path / "overrides.toml")
         result = BlackRunner().invoke(
-            indigo.main, ["--diff", "--config", config, example]
+            nila.main, ["--diff", "--config", config, example]
         )
         assert result.exit_code == 0
         assert result.stdout_bytes is not None
 
         assert "- pass\n+  pass\n" in self.decode_and_normalized(result.stdout_bytes)
 
-    def test_indigo_disable(self) -> None:
-        path = THIS_DIR / "data" / "indigo_configs"
+    def test_nila_disable(self) -> None:
+        path = THIS_DIR / "data" / "nila_configs"
         example = str(path / "example.py")
         config = str(path / "disable.toml")
         result = BlackRunner().invoke(
-            indigo.main, ["--diff", "--config", config, example]
+            nila.main, ["--diff", "--config", config, example]
         )
         assert result.exit_code == 0
         assert result.stdout_bytes is not None
@@ -2581,24 +2581,24 @@ class TestFileCollection:
         )
         assert "- pass\n+    pass\n" in stdout
 
-    def test_indigo_in_tool_black(self) -> None:
-        path = THIS_DIR / "data" / "indigo_configs"
+    def test_nila_in_tool_black(self) -> None:
+        path = THIS_DIR / "data" / "nila_configs"
         example = str(path / "example.py")
         config = str(path / "tool_black.toml")
         result = BlackRunner().invoke(
-            indigo.main, ["--diff", "--config", config, example]
+            nila.main, ["--diff", "--config", config, example]
         )
         assert result.exit_code == 0
         assert result.stdout_bytes is not None
 
         assert "- pass\n+    pass\n" in self.decode_and_normalized(result.stdout_bytes)
     
-    def test_indigo_in_tool_pyink(self) -> None:
-        path = THIS_DIR / "data" / "indigo_configs"
+    def test_nila_in_tool_pyink(self) -> None:
+        path = THIS_DIR / "data" / "nila_configs"
         example = str(path / "example.py")
         config = str(path / "tool_pyink.toml")
         result = BlackRunner().invoke(
-            indigo.main, ["--diff", "--config", config, example]
+            nila.main, ["--diff", "--config", config, example]
         )
         assert result.exit_code == 0
         assert result.stdout_bytes is not None
@@ -2607,13 +2607,13 @@ class TestFileCollection:
 
     @pytest.mark.parametrize("values", [("7-7",), ("1-1", "7-7")])
     def test_pyink_lines(self, values) -> None:
-        path = THIS_DIR / "data" / "indigo_configs"
+        path = THIS_DIR / "data" / "nila_configs"
         example = str(path / "example.py")
         pyink_lines_args = []
         for value in values:
             pyink_lines_args.append(f"--pyink-lines={value}")
         result = BlackRunner().invoke(
-            indigo.main, pyink_lines_args + ["--diff", example]
+            nila.main, pyink_lines_args + ["--diff", example]
         )
         assert result.stdout_bytes is not None
         assert result.exit_code == 0
@@ -2634,20 +2634,20 @@ class TestFileCollection:
         ],
     )
     def test_pyink_lines_incorrect(self, value, message) -> None:
-        path = THIS_DIR / "data" / "indigo_configs"
+        path = THIS_DIR / "data" / "nila_configs"
         example = str(path / "example.py")
-        result = BlackRunner().invoke(indigo.main, [f"--pyink-lines={value}", example])
+        result = BlackRunner().invoke(nila.main, [f"--pyink-lines={value}", example])
         assert result.exit_code == 1
         assert result.stderr_bytes is not None
 
         assert message in result.stderr_bytes.decode()
 
     def test_pyink_use_majority_quotes(self) -> None:
-        path = THIS_DIR / "data" / "indigo_configs"
+        path = THIS_DIR / "data" / "nila_configs"
         example = str(path / "majority_quotes.py")
         config = str(path / "majority_quotes.toml")
         result = BlackRunner().invoke(
-            indigo.main, ["--diff", "--config", config, example]
+            nila.main, ["--diff", "--config", config, example]
         )
         assert result.exit_code == 0
         assert result.stdout_bytes is not None
@@ -2667,42 +2667,42 @@ class TestDeFactoAPI:
     def test_format_str(self) -> None:
         # format_str and Mode should keep working
         assert (
-            indigo.format_str("print('hello')", mode=indigo.Mode()) == 'print("hello")\n'
+            nila.format_str("print('hello')", mode=nila.Mode()) == 'print("hello")\n'
         )
 
         # you can pass line length
         assert (
-            indigo.format_str("print('hello')", mode=indigo.Mode(line_length=42))
+            nila.format_str("print('hello')", mode=nila.Mode(line_length=42))
             == 'print("hello")\n'
         )
 
         # invalid input raises InvalidInput
-        with pytest.raises(indigo.InvalidInput):
-            indigo.format_str("syntax error", mode=indigo.Mode())
+        with pytest.raises(nila.InvalidInput):
+            nila.format_str("syntax error", mode=nila.Mode())
 
     def test_format_file_contents(self) -> None:
         # You probably should be using format_str() instead, but let's keep
         # this one around since people do use it
         assert (
-            indigo.format_file_contents("x=1", fast=True, mode=indigo.Mode()) == "x = 1\n"
+            nila.format_file_contents("x=1", fast=True, mode=nila.Mode()) == "x = 1\n"
         )
 
-        with pytest.raises(indigo.NothingChanged):
-            indigo.format_file_contents("x = 1\n", fast=True, mode=indigo.Mode())
+        with pytest.raises(nila.NothingChanged):
+            nila.format_file_contents("x = 1\n", fast=True, mode=nila.Mode())
 
 
 try:
-    with open(indigo.__file__, "r", encoding="utf-8") as _bf:
+    with open(nila.__file__, "r", encoding="utf-8") as _bf:
         black_source_lines = _bf.readlines()
 except UnicodeDecodeError:
-    if not indigo.COMPILED:
+    if not nila.COMPILED:
         raise
 
 
 def tracefunc(
     frame: types.FrameType, event: str, arg: Any
 ) -> Callable[[types.FrameType, str, Any], Any]:
-    """Show function calls `from indigo/__init__.py` as they happen.
+    """Show function calls `from nila/__init__.py` as they happen.
 
     Register this with `sys.settrace()` in a test you're debugging.
     """
@@ -2718,6 +2718,6 @@ def tracefunc(
     while funcname.startswith("@"):
         func_sig_lineno += 1
         funcname = black_source_lines[func_sig_lineno].strip()
-    if "indigo/__init__.py" in filename:
+    if "nila/__init__.py" in filename:
         print(f"{' ' * stack}{lineno}:{funcname}")
     return tracefunc

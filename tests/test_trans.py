@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from indigo.trans import iter_fexpr_spans
+from nila.trans import iter_fexpr_spans
 
 
 def test_fexpr_spans() -> None:

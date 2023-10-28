@@ -33,10 +33,10 @@ if sys.version_info >= (3, 11):
 else:
     import tomli as tomllib
 
-from indigo.handle_ipynb_magics import jupyter_dependencies_are_installed
-from indigo.mode import TargetVersion
-from indigo.output import err
-from indigo.report import Report
+from nila.handle_ipynb_magics import jupyter_dependencies_are_installed
+from nila.mode import TargetVersion
+from nila.output import err
+from nila.report import Report
 
 if TYPE_CHECKING:
     import colorama  # noqa: F401
@@ -119,7 +119,7 @@ def parse_pyproject_toml(path_config: str) -> Dict[str, Any]:
     """
     with open(path_config, "rb") as f:
         pyproject_toml = tomllib.load(f)
-    config: Dict[str, Any] = pyproject_toml.get("tool", {}).get("indigo", {})
+    config: Dict[str, Any] = pyproject_toml.get("tool", {}).get("nila", {})
     config = {k.replace("--", "").replace("-", "_"): v for k, v in config.items()}
 
     if "target_version" not in config:
@@ -214,9 +214,9 @@ def strip_specifier_set(specifier_set: SpecifierSet) -> SpecifierSet:
 
 @lru_cache
 def find_user_pyproject_toml() -> Path:
-    r"""Return the path to the top-level user configuration for indigo.
+    r"""Return the path to the top-level user configuration for nila.
 
-    This looks for ~\.indigo on Windows and ~/.config/indigo on Linux and other
+    This looks for ~\.nila on Windows and ~/.config/nila on Linux and other
     Unix systems.
 
     May raise:
@@ -225,10 +225,10 @@ def find_user_pyproject_toml() -> Path:
     """
     if sys.platform == "win32":
         # Windows
-        user_config_path = Path.home() / ".indigo"
+        user_config_path = Path.home() / ".nila"
     else:
         config_root = os.environ.get("XDG_CONFIG_HOME", "~/.config")
-        user_config_path = Path(config_root).expanduser() / "indigo"
+        user_config_path = Path(config_root).expanduser() / "nila"
     return user_config_path.resolve()
 
 

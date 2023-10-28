@@ -1,4 +1,4 @@
-# flags: --preview --line-length=80 --pyink --indigo --pyink-indentation=2
+# flags: --preview --line-length=80 --pyink --nila --pyink-indentation=2
 # long arguments
 normal_name = normal_function_name(
     "but with super long string arguments that on their own exceed the line limit so there's no way it can ever fit",

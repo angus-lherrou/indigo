@@ -14,8 +14,8 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeGuard
 
-from indigo.output import out
-from indigo.report import NothingChanged
+from nila.output import out
+from nila.report import NothingChanged
 
 TRANSFORMED_MAGICS = frozenset(
     (

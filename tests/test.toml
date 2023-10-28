@@ -1,4 +1,4 @@
-[tool.indigo]
+[tool.nila]
 verbose = 1
 --check = "no"
 diff = "y"

@@ -1,4 +1,4 @@
-# flags: --preview --line-length=80 --pyink --indigo --pyink-indentation=2
+# flags: --preview --line-length=80 --pyink --nila --pyink-indentation=2
 """Module docstrings in Pyink will be formatted.
 
     Just like other docstrings.

@@ -1,3 +1,3 @@
-from indigo import patched_main
+from nila import patched_main
 
 patched_main()

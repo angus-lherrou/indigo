@@ -17,9 +17,9 @@ from typing import (
     cast,
 )
 
-from indigo.brackets import COMMA_PRIORITY, DOT_PRIORITY, BracketTracker
-from indigo.mode import Mode, Preview
-from indigo.nodes import (
+from nila.brackets import COMMA_PRIORITY, DOT_PRIORITY, BracketTracker
+from nila.mode import Mode, Preview
+from nila.nodes import (
     BRACKETS,
     CLOSING_BRACKETS,
     OPENING_BRACKETS,
@@ -36,7 +36,7 @@ from indigo.nodes import (
     syms,
     whitespace,
 )
-from indigo.strings import str_width
+from nila.strings import str_width
 from blib2to3.pgen2 import token
 from blib2to3.pytree import Leaf, Node
 

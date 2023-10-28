@@ -10,11 +10,11 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Iterator, List, Optional, Tuple
 
-import indigo
-from indigo.const import DEFAULT_LINE_LENGTH
-from indigo.debug import DebugVisitor
-from indigo.mode import TargetVersion
-from indigo.output import diff, err, out
+import nila
+from nila.const import DEFAULT_LINE_LENGTH
+from nila.debug import DebugVisitor
+from nila.mode import TargetVersion
+from nila.output import diff, err, out
 
 from . import conftest
 
@@ -34,14 +34,14 @@ PY36_VERSIONS = {
     TargetVersion.PY39,
 }
 
-DEFAULT_MODE = indigo.Mode()
-ff = partial(indigo.format_file_in_place, mode=DEFAULT_MODE, fast=True)
-fs = partial(indigo.format_str, mode=DEFAULT_MODE)
+DEFAULT_MODE = nila.Mode()
+ff = partial(nila.format_file_in_place, mode=DEFAULT_MODE, fast=True)
+fs = partial(nila.format_str, mode=DEFAULT_MODE)
 
 
 @dataclass
 class TestCaseArgs:
-    mode: indigo.Mode = field(default_factory=indigo.Mode)
+    mode: nila.Mode = field(default_factory=nila.Mode)
     fast: bool = False
     minimum_version: Optional[Tuple[int, int]] = None
 
@@ -54,7 +54,7 @@ def _assert_format_equal(expected: str, actual: str) -> None:
         if conftest.PRINT_FULL_TREE:
             out("Expected tree:", fg="green")
         try:
-            exp_node = indigo.lib2to3_parse(expected)
+            exp_node = nila.lib2to3_parse(expected)
             bdv = DebugVisitor(print_output=conftest.PRINT_FULL_TREE)
             list(bdv.visit(exp_node))
             expected_out = "\n".join(bdv.list_output)
@@ -63,7 +63,7 @@ def _assert_format_equal(expected: str, actual: str) -> None:
         if conftest.PRINT_FULL_TREE:
             out("Actual tree:", fg="red")
         try:
-            exp_node = indigo.lib2to3_parse(actual)
+            exp_node = nila.lib2to3_parse(actual)
             bdv = DebugVisitor(print_output=conftest.PRINT_FULL_TREE)
             list(bdv.visit(exp_node))
             actual_out = "\n".join(bdv.list_output)
@@ -89,7 +89,7 @@ class FormatFailure(Exception):
 def assert_format(
     source: str,
     expected: str,
-    mode: indigo.Mode = DEFAULT_MODE,
+    mode: nila.Mode = DEFAULT_MODE,
     *,
     fast: bool = False,
     minimum_version: Optional[Tuple[int, int]] = None,
@@ -139,12 +139,12 @@ def assert_format(
 def _assert_format_inner(
     source: str,
     expected: Optional[str] = None,
-    mode: indigo.Mode = DEFAULT_MODE,
+    mode: nila.Mode = DEFAULT_MODE,
     *,
     fast: bool = False,
     minimum_version: Optional[Tuple[int, int]] = None,
 ) -> None:
-    actual = indigo.format_str(source, mode=mode)
+    actual = nila.format_str(source, mode=mode)
     if expected is not None:
         _assert_format_equal(expected, actual)
     # It's not useful to run safety checks if we're expecting no changes anyway. The
@@ -155,8 +155,8 @@ def _assert_format_inner(
         # being able to parse the code being formatted. This doesn't always work out
         # when checking modern code on older versions.
         if minimum_version is None or sys.version_info >= minimum_version:
-            indigo.assert_equivalent(source, actual)
-        indigo.assert_stable(source, actual, mode=mode)
+            nila.assert_equivalent(source, actual)
+        nila.assert_stable(source, actual, mode=mode)
 
 
 def dump_to_stderr(*output: str) -> str:
@@ -240,7 +240,7 @@ def get_flags_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--pyink", default=False, action="store_true")
-    parser.add_argument("--indigo", default=False, action="store_true")
+    parser.add_argument("--nila", default=False, action="store_true")
     parser.add_argument("--pyink-indentation", default=4, type=int, choices=[2, 4])
     return parser
 
@@ -248,7 +248,7 @@ def get_flags_parser() -> argparse.ArgumentParser:
 def parse_mode(flags_line: str) -> TestCaseArgs:
     parser = get_flags_parser()
     args = parser.parse_args(shlex.split(flags_line))
-    mode = indigo.Mode(
+    mode = nila.Mode(
         target_versions=set(args.target_version),
         line_length=args.line_length,
         string_normalization=not args.skip_string_normalization,
@@ -257,7 +257,7 @@ def parse_mode(flags_line: str) -> TestCaseArgs:
         magic_trailing_comma=not args.skip_magic_trailing_comma,
         preview=args.preview,
         is_pyink=args.pyink,
-        is_indigo=args.indigo,
+        is_nila=args.nila,
         pyink_indentation=args.pyink_indentation,
     )
     return TestCaseArgs(mode=mode, fast=args.fast, minimum_version=args.minimum_version)

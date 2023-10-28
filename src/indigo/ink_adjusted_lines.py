@@ -1,7 +1,7 @@
 """Module that provides the adjusted_lines used by incremental formatting.
 
-This is separate from indigo.ink to make dependency management easier. And this
-module will be folded to indigo.ink in the future.
+This is separate from nila.ink to make dependency management easier. And this
+module will be folded to nila.ink in the future.
 """
 
 import dataclasses

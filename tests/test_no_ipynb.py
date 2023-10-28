@@ -3,7 +3,7 @@ import pathlib
 import pytest
 from click.testing import CliRunner
 
-from indigo import jupyter_dependencies_are_installed, main
+from nila import jupyter_dependencies_are_installed, main
 from tests.util import get_case_path
 
 pytestmark = pytest.mark.no_jupyter

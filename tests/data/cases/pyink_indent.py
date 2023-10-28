@@ -1,4 +1,4 @@
-# flags: --preview --line-length=80 --pyink --indigo --pyink-indentation=2
+# flags: --preview --line-length=80 --pyink --nila --pyink-indentation=2
 def abc():
   if True:
     some_very_long_function(

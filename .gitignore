@@ -9,14 +9,14 @@ docs/_static/pypi.svg
 __pycache__
 
 # Packaging artifacts
-indigo.egg-info
-indigo.dist-info
+nila.egg-info
+nila.dist-info
 build/
 dist/
 pip-wheel-metadata/
 .eggs
 
-src/_indigo_version.py
+src/_nila_version.py
 .idea
 
 .dmypy.json
